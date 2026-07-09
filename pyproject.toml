@@ -1,0 +1,34 @@
+[project]
+name = "xiaoai-home-assistant"
+version = "0.1.0"
+description = "XiaoAI Home Assistant Bridge - 通过小爱音箱语音控制第三方智能家居设备"
+requires-python = ">=3.8"
+authors = [
+    { name = "seele", email = "seele@example.com" }
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+
+[tool.pdm.scripts]
+start = "uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 8000"
+dev = "uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 8000 --reload"
+test = "pytest"
+lint = "flake8 src/ tests/"
+
+[tool.pdm.dev-dependencies]
+dev = [
+    "pytest",
+    "flake8",
+    "black"
+]
+
+[dependencies]
+fastapi = "^0.115.0"
+uvicorn = "^0.30.0"
+httpx = "^0.27.0"
+pydantic = "^2.9.0"
+python-dotenv = "^1.0.1"
+
+[build-system]
+requires = ["pdm-backend"]
+build-backend = "pdm.backend"

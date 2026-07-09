@@ -1,0 +1,44 @@
+{
+  "home_assistant": {
+    "url": "http://your-home-assistant-ip:8123",
+    "api_token": "your-long-lived-access-token"
+  },
+  "xiaomi_speaker": {
+    "entity_id": "media_player.your_speaker_entity",
+    "execute_text_service": "xiaomi_miot_raw.execute_text",
+    "play_text_service": "xiaomi_miot_raw.play_text"
+  },
+  "bridge": {
+    "host": "0.0.0.0",
+    "port": 8000,
+    "debug": false,
+    "log_level": "INFO",
+    "polling_interval": 3
+  },
+  "commands": {
+    "gree_ac": {
+      "name": "格力空调",
+      "entity_id": "climate.gree_air_conditioner",
+      "keywords": ["格力空调", "主卧空调"]
+    },
+    "midea_ac": {
+      "name": "美的空调",
+      "entity_id": "climate.midea_air_conditioner",
+      "keywords": ["美的空调", "客厅空调"]
+    },
+    "refrigerator": {
+      "name": "冰箱",
+      "entity_id": "sensor.refrigerator_temperature",
+      "keywords": ["冰箱", "冰柜"]
+    },
+    "dishwasher": {
+      "name": "洗碗机",
+      "entity_id": "sensor.dishwasher_status",
+      "keywords": ["洗碗机"]
+    }
+  },
+  "tts": {
+    "enabled": true,
+    "volume": 50
+  }
+}

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XiaoAI HA Bridge - 配置管理</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .header { background: #1a73e8; color: white; padding: 16px 24px; }
+        .header h1 { font-size: 20px; font-weight: 500; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); padding: 24px; margin-bottom: 24px; }
+        .card h2 { font-size: 18px; margin-bottom: 16px; color: #1a73e8; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1a73e8; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: 500; }
+        .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #1557b0; }
+        .btn-success { background: #34a853; color: white; }
+        .btn-success:hover { background: #2d8e47; }
+        .btn-danger { background: #ea4335; color: white; }
+        .btn-danger:hover { background: #c5221f; }
+        .btn-secondary { background: #f1f3f4; color: #333; }
+        .btn-secondary:hover { background: #e8eaed; }
+        .alert { padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; }
+        .alert.success { background: #e6f4ea; color: #137333; }
+        .alert.error { background: #fce8e6; color: #c5221f; }
+        .alert.info { background: #e8f0fe; color: #1967d2; }
+        .device-list { margin-top: 16px; }
+        .device-item { display: flex; align-items: center; padding: 12px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; gap: 12px; }
+        .device-item .keyword-input { flex: 1; }
+        .device-item .device-info { flex: 2; }
+        .device-item .device-name { font-weight: 500; }
+        .device-item .entity-id { font-size: 12px; color: #666; font-family: monospace; }
+        .device-item .device-domain { font-size: 12px; background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 12px; }
+        .domain-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .domain-tab { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; background: white; font-size: 13px; }
+        .domain-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
+        .entity-list { max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
+        .entity-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
+        .entity-item:hover { background: #f8f9fa; }
+        .entity-item.selected { background: #e8f0fe; }
+        .entity-info { flex: 1; }
+        .entity-name { font-weight: 500; font-size: 14px; }
+        .entity-id { font-size: 12px; color: #666; font-family: monospace; }
+        .entity-state { font-size: 12px; color: #34a853; }
+        .bindings-section { margin-top: 24px; }
+        .binding-item { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
+        .binding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .binding-name { font-weight: 500; font-size: 16px; }
+        .binding-entity { font-family: monospace; font-size: 12px; color: #666; margin-bottom: 8px; }
+        .keywords-tags { display: flex; gap: 8px; flex-wrap: wrap; }
+        .keyword-tag { background: #e8f0fe; color: #1967d2; padding: 4px 12px; border-radius: 16px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+        .keyword-tag .remove { cursor: pointer; font-weight: bold; }
+        .add-keyword { display: flex; gap: 8px; margin-top: 8px; }
+        .add-keyword input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .empty-state { text-align: center; padding: 48px; color: #666; }
+        .empty-state p { margin-bottom: 16px; }
+        .loading { text-align: center; padding: 24px; color: #666; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接</h1>
+    </div>
+    <div class="container">
+        <div id="alert-area"></div>
+
+        <div class="card">
+            <h2>📡 Home Assistant 连接配置</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Home Assistant URL</label>
+                    <input type="text" id="ha-url" placeholder="http://your-ha-ip:8123">
+                </div>
+                <div class="form-group">
+                    <label>API Token (Long-lived access token)</label>
+                    <input type="password" id="ha-token" placeholder="输入HA访问令牌">
+                </div>
+            </div>
+            <div style="display: flex; gap: 12px;">
+                <button class="btn btn-primary" onclick="testConnection()">🔌 测试连接</button>
+                <button class="btn btn-secondary" onclick="discoverEntities()">🔍 发现设备</button>
+                <button class="btn btn-success" onclick="saveHAConfig()">💾 保存配置</button>
+            </div>
+        </div>
+
+        <div class="card" id="speaker-card" style="display: none;">
+            <h2>🔊 小爱音箱配置</h2>
+            <div class="form-group">
+                <label>选择小爱音箱实体</label>
+                <select id="speaker-entity">
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>执行文本指令服务</label>
+                    <input type="text" id="execute-service" value="xiaomi_miot_raw.execute_text">
+                </div>
+                <div class="form-group">
+                    <label>TTS播报服务</label>
+                    <input type="text" id="play-service" value="xiaomi_miot_raw.play_text">
+                </div>
+            </div>
+        </div>
+
+        <div class="card" id="entities-card" style="display: none;">
+            <h2>📱 设备绑定配置</h2>
+            <p style="color: #666; margin-bottom: 16px;">从下方选择设备实体，添加语音触发关键词即可绑定。支持多个关键词（别名）。</p>
+            
+            <div class="domain-tabs" id="domain-tabs">
+            </div>
+
+            <div id="entity-search" style="margin-bottom: 12px;">
+                <input type="text" id="search-input" placeholder="搜索设备名称..." oninput="filterEntities()" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+
+            <div class="entity-list" id="entity-list">
+                <div class="loading">正在加载设备列表...</div>
+            </div>
+
+            <div class="bindings-section">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">📋 已绑定设备</h3>
+                <div id="bindings-list">
+                    <div class="empty-state">
+                        <p>还没有绑定设备，点击上方设备添加绑定</p>
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="saveAllBindings()" style="margin-top: 12px;">💾 保存所有绑定</button>
+            </div>
+        </div>
+
+        <div class="card" id="test-card" style="display: none;">
+            <h2>🧪 指令测试</h2>
+            <div class="form-group">
+                <label>输入语音指令测试</label>
+                <input type="text" id="test-text" placeholder="例如: 打开格力空调">
+            </div>
+            <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
+            <div id="test-result" style="margin-top: 12px;"></div>
+        </div>
+    </div>
+
+    <script>
+        let config = null;
+        let entities = {};
+        let currentDomain = 'climate';
+        let bindings = {};
+
+        function showAlert(message, type = 'success') {
+            const area = document.getElementById('alert-area');
+            const alert = document.createElement('div');
+            alert.className = `alert ${type}`;
+            alert.textContent = message;
+            area.appendChild(alert);
+            setTimeout(() => alert.remove(), 5000);
+        }
+
+        async function loadConfig() {
+            try {
+                const resp = await fetch('/api/config');
+                if (resp.ok) {
+                    config = await resp.json();
+                    document.getElementById('ha-url').value = config.home_assistant.url;
+                    document.getElementById('ha-token').value = config.home_assistant.api_token;
+                    document.getElementById('speaker-entity').value = config.xiaomi_speaker.entity_id;
+                    document.getElementById('execute-service').value = config.xiaomi_speaker.execute_text_service;
+                    document.getElementById('play-service').value = config.xiaomi_speaker.play_text_service;
+                    
+                    bindings = config.commands || {};
+                    if (config.home_assistant.url) {
+                        await discoverEntities();
+                    }
+                }
+            } catch (e) {
+                console.log('配置加载失败（可能是首次运行）');
+            }
+        }
+
+        async function testConnection() {
+            const url = document.getElementById('ha-url').value;
+            const token = document.getElementById('ha-token').value;
+            
+            if (!url || !token) {
+                showAlert('请填写 URL 和 Token', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/discover/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url, api_token: token })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showAlert('✅ 连接成功！已发现设备', 'success');
+                    entities = result.entities;
+                    renderDomainTabs();
+                    renderEntities();
+                    renderSpeakerSelect();
+                    document.getElementById('entities-card').style.display = 'block';
+                    document.getElementById('speaker-card').style.display = 'block';
+                    document.getElementById('test-card').style.display = 'block';
+                } else {
+                    showAlert('❌ 连接失败: ' + (result.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function discoverEntities() {
+            try {
+                const resp = await fetch('/api/discover');
+                if (resp.ok) {
+                    entities = await resp.json();
+                    renderDomainTabs();
+                    renderEntities();
+                    renderSpeakerSelect();
+                    document.getElementById('entities-card').style.display = 'block';
+                    document.getElementById('speaker-card').style.display = 'block';
+                    document.getElementById('test-card').style.display = 'block';
+                    showAlert('✅ 设备列表已加载', 'success');
+                }
+            } catch (e) {
+                console.log('请先配置HA连接');
+            }
+        }
+
+        function renderDomainTabs() {
+            const tabs = document.getElementById('domain-tabs');
+            const domainNames = {
+                climate: '❄️ 空调',
+                media_player: '🔊 音箱/媒体',
+                sensor: '📊 传感器',
+                switch: '🔌 开关',
+                light: '💡 灯',
+                fan: '🌀 风扇',
+                other: '📦 其他'
+            };
+            
+            let html = '';
+            const domains = Object.keys(entities).filter(d => entities[d] && entities[d].length > 0);
+            for (const domain of domains) {
+                const count = entities[domain].length;
+                const name = domainNames[domain] || domain;
+                html += `<div class="domain-tab ${domain === currentDomain ? 'active' : ''}" onclick="switchDomain('${domain}')">${name} (${count})</div>`;
+            }
+            tabs.innerHTML = html;
+        }
+
+        function switchDomain(domain) {
+            currentDomain = domain;
+            renderDomainTabs();
+            renderEntities();
+        }
+
+        function filterEntities() {
+            renderEntities();
+        }
+
+        function renderEntities() {
+            const list = document.getElementById('entity-list');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            
+            const domainEntities = entities[currentDomain] || [];
+            const filtered = domainEntities.filter(e => 
+                e.name.toLowerCase().includes(search) || 
+                e.entity_id.toLowerCase().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>没有找到设备</p></div>';
+                return;
+            }
+
+            let html = '';
+            for (const entity of filtered) {
+                const isBound = Object.values(bindings).some(b => b.entity_id === entity.entity_id);
+                html += `
+                    <div class="entity-item ${isBound ? 'selected' : ''}" onclick="toggleBinding('${entity.entity_id}')">
+                        <div class="entity-info">
+                            <div class="entity-name">${isBound ? '✅ ' : ''}${entity.name}</div>
+                            <div class="entity-id">${entity.entity_id}</div>
+                        </div>
+                        <div class="entity-state">${entity.state}</div>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+
+        function renderSpeakerSelect() {
+            const select = document.getElementById('speaker-entity');
+            const speakers = entities.media_player || [];
+            
+            let html = '<option value="">-- 选择小爱音箱 --</option>';
+            for (const sp of speakers) {
+                html += `<option value="${sp.entity_id}">${sp.name}</option>`;
+            }
+            select.innerHTML = html;
+            
+            if (config && config.xiaomi_speaker) {
+                select.value = config.xiaomi_speaker.entity_id;
+            }
+        }
+
+        function toggleBinding(entityId) {
+            let found = false;
+            let foundKey = null;
+            
+            for (const [key, binding] of Object.entries(bindings)) {
+                if (binding.entity_id === entityId) {
+                    found = true;
+                    foundKey = key;
+                    break;
+                }
+            }
+
+            if (found) {
+                delete bindings[foundKey];
+                showAlert('已取消绑定', 'info');
+            } else {
+                let entity = null;
+                for (const domainEntities of Object.values(entities)) {
+                    entity = domainEntities.find(e => e.entity_id === entityId);
+                    if (entity) break;
+                }
+                
+                if (entity) {
+                    const key = entityId.replace('.', '_');
+                    bindings[key] = {
+                        name: entity.name,
+                        entity_id: entityId,
+                        keywords: [entity.name]
+                    };
+                    showAlert(`已添加 ${entity.name} 到绑定列表`, 'success');
+                }
+            }
+
+            renderEntities();
+            renderBindings();
+        }
+
+        function renderBindings() {
+            const list = document.getElementById('bindings-list');
+            const keys = Object.keys(bindings);
+            
+            if (keys.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>还没有绑定设备，点击上方设备添加绑定</p></div>';
+                return;
+            }
+
+            let html = '';
+            for (const [key, binding] of Object.entries(bindings)) {
+                const keywordsHtml = binding.keywords.map((kw, idx) => `
+                    <span class="keyword-tag">
+                        ${kw}
+                        <span class="remove" onclick="removeKeyword('${key}', ${idx})">×</span>
+                    </span>
+                `).join('');
+
+                html += `
+                    <div class="binding-item">
+                        <div class="binding-header">
+                            <span class="binding-name">${binding.name}</span>
+                            <button class="btn btn-danger" onclick="removeBinding('${key}')" style="padding: 4px 12px; font-size: 12px;">删除</button>
+                        </div>
+                        <div class="binding-entity">${binding.entity_id}</div>
+                        <div class="keywords-tags">
+                            ${keywordsHtml}
+                        </div>
+                        <div class="add-keyword">
+                            <input type="text" id="input-${key}" placeholder="添加关键词/别名..." onkeypress="if(event.key==='Enter')addKeyword('${key}')">
+                            <button class="btn btn-secondary" onclick="addKeyword('${key}')" style="padding: 6px 12px;">添加</button>
+                        </div>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+
+        function addKeyword(key) {
+            const input = document.getElementById(`input-${key}`);
+            const kw = input.value.trim();
+            if (kw && !bindings[key].keywords.includes(kw)) {
+                bindings[key].keywords.push(kw);
+                renderBindings();
+                showAlert(`已添加关键词: ${kw}`, 'success');
+            }
+            input.value = '';
+        }
+
+        function removeKeyword(key, idx) {
+            bindings[key].keywords.splice(idx, 1);
+            renderBindings();
+        }
+
+        function removeBinding(key) {
+            delete bindings[key];
+            renderEntities();
+            renderBindings();
+            showAlert('已删除绑定', 'info');
+        }
+
+        async function saveHAConfig() {
+            const url = document.getElementById('ha-url').value;
+            const token = document.getElementById('ha-token').value;
+            const speaker = document.getElementById('speaker-entity').value;
+            const execService = document.getElementById('execute-service').value;
+            const playService = document.getElementById('play-service').value;
+
+            if (!url || !token) {
+                showAlert('请填写 URL 和 Token', 'error');
+                return;
+            }
+
+            const newConfig = {
+                home_assistant: { url, api_token: token },
+                xiaomi_speaker: {
+                    entity_id: speaker || '',
+                    execute_text_service: execService || 'xiaomi_miot_raw.execute_text',
+                    play_text_service: playService || 'xiaomi_miot_raw.play_text'
+                },
+                bridge: config ? config.bridge : {
+                    host: '0.0.0.0',
+                    port: 8000,
+                    debug: false,
+                    log_level: 'INFO',
+                    polling_interval: 3
+                },
+                tts: config ? config.tts : { enabled: true, volume: 50 },
+                commands: bindings
+            };
+
+            try {
+                const resp = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newConfig)
+                });
+                if (resp.ok) {
+                    config = newConfig;
+                    showAlert('✅ 配置保存成功！', 'success');
+                } else {
+                    showAlert('❌ 保存失败', 'error');
+                }
+            } catch (e) {
+                showAlert('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function saveAllBindings() {
+            await saveHAConfig();
+        }
+
+        async function testCommand() {
+            const text = document.getElementById('test-text').value;
+            if (!text) {
+                showAlert('请输入指令', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/command/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const result = await resp.json();
+                const resultDiv = document.getElementById('test-result');
+                
+                if (result.matched) {
+                    const actionMap = {
+                        turn_on: '打开设备',
+                        turn_off: '关闭设备',
+                        adjust: '调节设置',
+                        null: '状态查询'
+                    };
+                    const action = actionMap[result.parsed.action] || '其他操作';
+                    let details = `✅ 匹配到设备: <b>${result.parsed.name}</b><br>操作: ${action}`;
+                    if (result.parsed.temperature) details += `<br>温度: ${result.parsed.temperature}°C`;
+                    if (result.parsed.mode) details += `<br>模式: ${result.parsed.mode}`;
+                    resultDiv.innerHTML = `<div class="alert success">${details}</div>`;
+                } else {
+                    resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令</div>';
+                }
+            } catch (e) {
+                showAlert('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>

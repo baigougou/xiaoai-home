@@ -65,9 +65,9 @@ class CommandParser:
                 has_mode_only_open = True
                 break
 
-        has_turn_on = "打开" in text or has_mode_only_open
+        has_turn_on = "打开" in text or "开" in text or has_mode_only_open or (result["mode"] is not None and not has_turn_off)
 
-        has_adjust = "调到" in text or "设置" in text or "调至" in text or result["temperature"] is not None
+        has_adjust = "调到" in text or "设置" in text or "调至" in text or result["temperature"] is not None or (result["temperature"] is not None and result["mode"] is not None)
 
         query_patterns = [
             "是多少",

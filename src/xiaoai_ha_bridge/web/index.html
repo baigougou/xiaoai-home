@@ -26,6 +26,7 @@
         .btn-danger:hover { background: #c5221f; }
         .btn-secondary { background: #f1f3f4; color: #333; }
         .btn-secondary:hover { background: #e8eaed; }
+        .btn-small { padding: 4px 10px; font-size: 12px; }
         .alert { padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; }
         .alert.success { background: #e6f4ea; color: #137333; }
         .alert.error { background: #fce8e6; color: #c5221f; }
@@ -36,7 +37,15 @@
         .device-item .device-info { flex: 2; }
         .device-item .device-name { font-weight: 500; }
         .device-item .entity-id { font-size: 12px; color: #666; font-family: monospace; }
-        .device-item .device-domain { font-size: 12px; background: #e8f0fe; color: #1967d2; padding: 2px 8px; border-radius: 12px; }
+        .device-item .device-type { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
+        .type-climate { background: #e8f0fe; color: #1967d2; }
+        .type-vacuum { background: #fef7e0; color: #b06000; }
+        .type-light { background: #fce8e6; color: #c5221f; }
+        .type-switch { background: #e6f4ea; color: #137333; }
+        .type-fan { background: #e6f4ea; color: #137333; }
+        .type-media_player { background: #f3e8fd; color: #7627bb; }
+        .type-sensor { background: #f1f3f4; color: #5f6368; }
+        .type-other { background: #f1f3f4; color: #5f6368; }
         .domain-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
         .domain-tab { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; background: white; font-size: 13px; }
         .domain-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
@@ -51,7 +60,7 @@
         .bindings-section { margin-top: 24px; }
         .binding-item { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
         .binding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .binding-name { font-weight: 500; font-size: 16px; }
+        .binding-name { font-weight: 500; font-size: 16px; display: flex; align-items: center; gap: 8px; }
         .binding-entity { font-family: monospace; font-size: 12px; color: #666; margin-bottom: 8px; }
         .keywords-tags { display: flex; gap: 8px; flex-wrap: wrap; }
         .keyword-tag { background: #e8f0fe; color: #1967d2; padding: 4px 12px; border-radius: 16px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
@@ -62,11 +71,20 @@
         .empty-state p { margin-bottom: 16px; }
         .loading { text-align: center; padding: 24px; color: #666; }
         .hidden { display: none !important; }
+        .speaker-list { margin-bottom: 12px; }
+        .speaker-item { display: flex; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; gap: 10px; }
+        .speaker-item.selected { background: #e8f0fe; border-color: #1a73e8; }
+        .speaker-info { flex: 1; }
+        .speaker-name { font-weight: 500; }
+        .speaker-id { font-size: 12px; color: #666; font-family: monospace; }
+        .checkbox { width: 18px; height: 18px; cursor: pointer; }
+        .hint { font-size: 12px; color: #666; margin-top: 4px; }
+        .type-select { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接</h1>
+        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接 v0.2.0</h1>
     </div>
     <div class="container">
         <div id="alert-area"></div>
@@ -83,19 +101,19 @@
                     <input type="password" id="ha-token" placeholder="输入HA访问令牌">
                 </div>
             </div>
-            <div style="display: flex; gap: 12px;">
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
                 <button class="btn btn-primary" onclick="testConnection()">🔌 测试连接</button>
                 <button class="btn btn-secondary" onclick="discoverEntities()">🔍 发现设备</button>
-                <button class="btn btn-success" onclick="saveHAConfig()">💾 保存配置</button>
+                <button class="btn btn-success" onclick="saveConfig()">💾 保存全部配置</button>
+                <button class="btn btn-danger" onclick="restartService()">🔄 重启服务</button>
             </div>
         </div>
 
         <div class="card" id="speaker-card" style="display: none;">
-            <h2>🔊 小爱音箱配置</h2>
-            <div class="form-group">
-                <label>选择小爱音箱实体</label>
-                <select id="speaker-entity">
-                </select>
+            <h2>🔊 小爱音箱配置（支持多个）</h2>
+            <p style="color: #666; margin-bottom: 12px; font-size: 13px;">勾选需要监听的小爱音箱，任意一个音箱收到指令都可以控制设备，回复也会从听到指令的音箱播报。</p>
+            <div class="speaker-list" id="speaker-list">
+                <div class="loading">正在加载音箱列表...</div>
             </div>
             <div class="form-row">
                 <div class="form-group">
@@ -111,7 +129,7 @@
 
         <div class="card" id="entities-card" style="display: none;">
             <h2>📱 设备绑定配置</h2>
-            <p style="color: #666; margin-bottom: 16px;">从下方选择设备实体，添加语音触发关键词即可绑定。支持多个关键词（别名）。</p>
+            <p style="color: #666; margin-bottom: 16px; font-size: 13px;">选择设备实体添加绑定，给每个设备设置语音触发关键词/别名即可。支持空调、扫地机器人、灯、开关、风扇等。</p>
             
             <div class="domain-tabs" id="domain-tabs">
             </div>
@@ -131,7 +149,7 @@
                         <p>还没有绑定设备，点击上方设备添加绑定</p>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="saveAllBindings()" style="margin-top: 12px;">💾 保存所有绑定</button>
+                <button class="btn btn-primary" onclick="saveConfig()" style="margin-top: 12px;">💾 保存全部配置</button>
             </div>
         </div>
 
@@ -139,9 +157,12 @@
             <h2>🧪 指令测试</h2>
             <div class="form-group">
                 <label>输入语音指令测试</label>
-                <input type="text" id="test-text" placeholder="例如: 打开格力空调">
+                <input type="text" id="test-text" placeholder="例如: 打开主卧空调、扫地机器人开始清扫、扫地机器人回充" onkeypress="if(event.key==='Enter')testCommand()">
             </div>
-            <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
+                <span style="font-size: 12px; color: #666; align-self: center;">提示：扫地机器人支持"开始清扫"、"停止"、"暂停"、"回充"、"状态"等指令</span>
+            </div>
             <div id="test-result" style="margin-top: 12px;"></div>
         </div>
     </div>
@@ -151,6 +172,7 @@
         let entities = {};
         let currentDomain = 'climate';
         let bindings = {};
+        let selectedSpeakers = [];
 
         function showAlert(message, type = 'success') {
             const area = document.getElementById('alert-area');
@@ -161,19 +183,49 @@
             setTimeout(() => alert.remove(), 5000);
         }
 
+        function getDeviceType(entityId) {
+            if (entityId.startsWith('climate.')) return 'climate';
+            if (entityId.startsWith('vacuum.')) return 'vacuum';
+            if (entityId.startsWith('light.')) return 'light';
+            if (entityId.startsWith('switch.')) return 'switch';
+            if (entityId.startsWith('fan.')) return 'fan';
+            if (entityId.startsWith('media_player.')) return 'media_player';
+            if (entityId.startsWith('sensor.')) return 'sensor';
+            return 'other';
+        }
+
+        function getTypeLabel(type) {
+            const labels = {
+                climate: '空调',
+                vacuum: '扫地机器人',
+                light: '灯',
+                switch: '开关',
+                fan: '风扇',
+                media_player: '媒体',
+                sensor: '传感器',
+                other: '其他'
+            };
+            return labels[type] || type;
+        }
+
         async function loadConfig() {
             try {
                 const resp = await fetch('/api/config');
                 if (resp.ok) {
                     config = await resp.json();
-                    document.getElementById('ha-url').value = config.home_assistant.url;
-                    document.getElementById('ha-token').value = config.home_assistant.api_token;
-                    document.getElementById('speaker-entity').value = config.xiaomi_speaker.entity_id;
-                    document.getElementById('execute-service').value = config.xiaomi_speaker.execute_text_service;
-                    document.getElementById('play-service').value = config.xiaomi_speaker.play_text_service;
+                    document.getElementById('ha-url').value = config.home_assistant.url || '';
+                    document.getElementById('ha-token').value = config.home_assistant.api_token || '';
+                    document.getElementById('execute-service').value = config.xiaomi_speakers && config.xiaomi_speakers.length > 0 
+                        ? config.xiaomi_speakers[0].execute_text_service || 'xiaomi_miot_raw.execute_text'
+                        : 'xiaomi_miot_raw.execute_text';
+                    document.getElementById('play-service').value = config.xiaomi_speakers && config.xiaomi_speakers.length > 0
+                        ? config.xiaomi_speakers[0].play_text_service || 'xiaomi_miot_raw.play_text'
+                        : 'xiaomi_miot_raw.play_text';
                     
+                    selectedSpeakers = (config.xiaomi_speakers || []).map(sp => sp.entity_id);
                     bindings = config.commands || {};
-                    if (config.home_assistant.url) {
+                    
+                    if (config.home_assistant.url && config.home_assistant.api_token) {
                         await discoverEntities();
                     }
                 }
@@ -203,7 +255,7 @@
                     entities = result.entities;
                     renderDomainTabs();
                     renderEntities();
-                    renderSpeakerSelect();
+                    renderSpeakerList();
                     document.getElementById('entities-card').style.display = 'block';
                     document.getElementById('speaker-card').style.display = 'block';
                     document.getElementById('test-card').style.display = 'block';
@@ -216,20 +268,42 @@
         }
 
         async function discoverEntities() {
+            const url = document.getElementById('ha-url').value;
+            const token = document.getElementById('ha-token').value;
+            
             try {
-                const resp = await fetch('/api/discover');
-                if (resp.ok) {
-                    entities = await resp.json();
+                let entitiesData;
+                if (url && token) {
+                    const resp = await fetch('/api/discover/test', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ url, api_token: token })
+                    });
+                    const result = await resp.json();
+                    if (result.success) {
+                        entitiesData = result.entities;
+                    }
+                }
+                
+                if (!entitiesData) {
+                    const resp = await fetch('/api/discover');
+                    if (resp.ok) {
+                        entitiesData = await resp.json();
+                    }
+                }
+                
+                if (entitiesData) {
+                    entities = entitiesData;
                     renderDomainTabs();
                     renderEntities();
-                    renderSpeakerSelect();
+                    renderSpeakerList();
                     document.getElementById('entities-card').style.display = 'block';
                     document.getElementById('speaker-card').style.display = 'block';
                     document.getElementById('test-card').style.display = 'block';
                     showAlert('✅ 设备列表已加载', 'success');
                 }
             } catch (e) {
-                console.log('请先配置HA连接');
+                console.log('请先配置HA连接', e);
             }
         }
 
@@ -237,17 +311,19 @@
             const tabs = document.getElementById('domain-tabs');
             const domainNames = {
                 climate: '❄️ 空调',
+                vacuum: '🤖 扫地机器人',
+                light: '💡 灯',
+                switch: '🔌 开关',
+                fan: '🌀 风扇',
                 media_player: '🔊 音箱/媒体',
                 sensor: '📊 传感器',
-                switch: '🔌 开关',
-                light: '💡 灯',
-                fan: '🌀 风扇',
                 other: '📦 其他'
             };
             
             let html = '';
             const domains = Object.keys(entities).filter(d => entities[d] && entities[d].length > 0);
-            for (const domain of domains) {
+            const orderedDomains = ['climate', 'vacuum', 'light', 'switch', 'fan', 'media_player', 'sensor', 'other'].filter(d => domains.includes(d));
+            for (const domain of orderedDomains.length > 0 ? orderedDomains : domains) {
                 const count = entities[domain].length;
                 const name = domainNames[domain] || domain;
                 html += `<div class="domain-tab ${domain === currentDomain ? 'active' : ''}" onclick="switchDomain('${domain}')">${name} (${count})</div>`;
@@ -283,12 +359,14 @@
             let html = '';
             for (const entity of filtered) {
                 const isBound = Object.values(bindings).some(b => b.entity_id === entity.entity_id);
+                const type = getDeviceType(entity.entity_id);
                 html += `
                     <div class="entity-item ${isBound ? 'selected' : ''}" onclick="toggleBinding('${entity.entity_id}')">
                         <div class="entity-info">
                             <div class="entity-name">${isBound ? '✅ ' : ''}${entity.name}</div>
                             <div class="entity-id">${entity.entity_id}</div>
                         </div>
+                        <span class="device-type type-${type}">${getTypeLabel(type)}</span>
                         <div class="entity-state">${entity.state}</div>
                     </div>
                 `;
@@ -296,19 +374,38 @@
             list.innerHTML = html;
         }
 
-        function renderSpeakerSelect() {
-            const select = document.getElementById('speaker-entity');
+        function renderSpeakerList() {
+            const list = document.getElementById('speaker-list');
             const speakers = entities.media_player || [];
             
-            let html = '<option value="">-- 选择小爱音箱 --</option>';
+            if (speakers.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>没有找到媒体播放器实体，请确认小米MIoT插件已配置</p></div>';
+                return;
+            }
+
+            let html = '';
             for (const sp of speakers) {
-                html += `<option value="${sp.entity_id}">${sp.name}</option>`;
+                const isSelected = selectedSpeakers.includes(sp.entity_id);
+                html += `
+                    <div class="speaker-item ${isSelected ? 'selected' : ''}" onclick="toggleSpeaker('${sp.entity_id}')">
+                        <input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();toggleSpeaker('${sp.entity_id}')">
+                        <div class="speaker-info">
+                            <div class="speaker-name">${sp.name}</div>
+                            <div class="speaker-id">${sp.entity_id}</div>
+                        </div>
+                    </div>
+                `;
             }
-            select.innerHTML = html;
-            
-            if (config && config.xiaomi_speaker) {
-                select.value = config.xiaomi_speaker.entity_id;
+            list.innerHTML = html;
+        }
+
+        function toggleSpeaker(entityId) {
+            if (selectedSpeakers.includes(entityId)) {
+                selectedSpeakers = selectedSpeakers.filter(id => id !== entityId);
+            } else {
+                selectedSpeakers.push(entityId);
             }
+            renderSpeakerList();
         }
 
         function toggleBinding(entityId) {
@@ -334,10 +431,11 @@
                 }
                 
                 if (entity) {
-                    const key = entityId.replace('.', '_');
+                    const key = entityId.replace(/\./g, '_');
                     bindings[key] = {
                         name: entity.name,
                         entity_id: entityId,
+                        device_type: getDeviceType(entityId),
                         keywords: [entity.name]
                     };
                     showAlert(`已添加 ${entity.name} 到绑定列表`, 'success');
@@ -359,7 +457,8 @@
 
             let html = '';
             for (const [key, binding] of Object.entries(bindings)) {
-                const keywordsHtml = binding.keywords.map((kw, idx) => `
+                const type = binding.device_type || getDeviceType(binding.entity_id);
+                const keywordsHtml = (binding.keywords || []).map((kw, idx) => `
                     <span class="keyword-tag">
                         ${kw}
                         <span class="remove" onclick="removeKeyword('${key}', ${idx})">×</span>
@@ -369,8 +468,20 @@
                 html += `
                     <div class="binding-item">
                         <div class="binding-header">
-                            <span class="binding-name">${binding.name}</span>
-                            <button class="btn btn-danger" onclick="removeBinding('${key}')" style="padding: 4px 12px; font-size: 12px;">删除</button>
+                            <span class="binding-name">
+                                <span class="device-type type-${type}">${getTypeLabel(type)}</span>
+                                ${binding.name}
+                            </span>
+                            <div>
+                                <select class="type-select" onchange="changeDeviceType('${key}', this.value)">
+                                    <option value="climate" ${type==='climate'?'selected':''}>空调</option>
+                                    <option value="vacuum" ${type==='vacuum'?'selected':''}>扫地机器人</option>
+                                    <option value="light" ${type==='light'?'selected':''}>灯</option>
+                                    <option value="switch" ${type==='switch'?'selected':''}>开关</option>
+                                    <option value="fan" ${type==='fan'?'selected':''}>风扇</option>
+                                </select>
+                                <button class="btn btn-danger btn-small" onclick="removeBinding('${key}')" style="margin-left: 8px;">删除</button>
+                            </div>
                         </div>
                         <div class="binding-entity">${binding.entity_id}</div>
                         <div class="keywords-tags">
@@ -378,7 +489,7 @@
                         </div>
                         <div class="add-keyword">
                             <input type="text" id="input-${key}" placeholder="添加关键词/别名..." onkeypress="if(event.key==='Enter')addKeyword('${key}')">
-                            <button class="btn btn-secondary" onclick="addKeyword('${key}')" style="padding: 6px 12px;">添加</button>
+                            <button class="btn btn-secondary btn-small" onclick="addKeyword('${key}')">添加</button>
                         </div>
                     </div>
                 `;
@@ -386,9 +497,16 @@
             list.innerHTML = html;
         }
 
+        function changeDeviceType(key, type) {
+            bindings[key].device_type = type;
+        }
+
         function addKeyword(key) {
             const input = document.getElementById(`input-${key}`);
             const kw = input.value.trim();
+            if (!bindings[key].keywords) {
+                bindings[key].keywords = [];
+            }
             if (kw && !bindings[key].keywords.includes(kw)) {
                 bindings[key].keywords.push(kw);
                 renderBindings();
@@ -409,10 +527,9 @@
             showAlert('已删除绑定', 'info');
         }
 
-        async function saveHAConfig() {
+        async function saveConfig() {
             const url = document.getElementById('ha-url').value;
             const token = document.getElementById('ha-token').value;
-            const speaker = document.getElementById('speaker-entity').value;
             const execService = document.getElementById('execute-service').value;
             const playService = document.getElementById('play-service').value;
 
@@ -421,13 +538,30 @@
                 return;
             }
 
+            if (selectedSpeakers.length === 0) {
+                showAlert('请至少选择一个小爱音箱', 'error');
+                return;
+            }
+
+            const speakersConfig = selectedSpeakers.map(eid => ({
+                entity_id: eid,
+                execute_text_service: execService || 'xiaomi_miot_raw.execute_text',
+                play_text_service: playService || 'xiaomi_miot_raw.play_text'
+            }));
+
+            for (const key of Object.keys(bindings)) {
+                const b = bindings[key];
+                if (!b.device_type) {
+                    b.device_type = getDeviceType(b.entity_id);
+                }
+                if (!b.keywords || b.keywords.length === 0) {
+                    b.keywords = [b.name];
+                }
+            }
+
             const newConfig = {
                 home_assistant: { url, api_token: token },
-                xiaomi_speaker: {
-                    entity_id: speaker || '',
-                    execute_text_service: execService || 'xiaomi_miot_raw.execute_text',
-                    play_text_service: playService || 'xiaomi_miot_raw.play_text'
-                },
+                xiaomi_speakers: speakersConfig,
                 bridge: config ? config.bridge : {
                     host: '0.0.0.0',
                     port: 8000,
@@ -447,17 +581,26 @@
                 });
                 if (resp.ok) {
                     config = newConfig;
-                    showAlert('✅ 配置保存成功！', 'success');
+                    showAlert('✅ 配置保存成功！服务将使用新配置', 'success');
                 } else {
-                    showAlert('❌ 保存失败', 'error');
+                    const err = await resp.json();
+                    showAlert('❌ 保存失败: ' + (err.detail || JSON.stringify(err)), 'error');
                 }
             } catch (e) {
                 showAlert('❌ 请求失败: ' + e.message, 'error');
             }
         }
 
-        async function saveAllBindings() {
-            await saveHAConfig();
+        async function restartService() {
+            if (!confirm('确定要重启服务吗？重启后页面会暂时无法访问。')) {
+                return;
+            }
+            try {
+                await fetch('/api/restart', { method: 'POST' });
+                showAlert('🔄 服务正在重启，请稍候刷新页面...', 'info');
+            } catch (e) {
+                showAlert('重启指令已发送', 'info');
+            }
         }
 
         async function testCommand() {
@@ -476,20 +619,25 @@
                 const result = await resp.json();
                 const resultDiv = document.getElementById('test-result');
                 
-                if (result.matched) {
+                if (result.matched && result.parsed) {
+                    const p = result.parsed;
                     const actionMap = {
-                        turn_on: '打开设备',
-                        turn_off: '关闭设备',
-                        adjust: '调节设置',
-                        null: '状态查询'
+                        turn_on: '🔛 打开设备',
+                        turn_off: '🔴 关闭设备',
+                        adjust: '⚙️ 调节设置',
+                        start: '▶️ 开始清扫',
+                        stop: '⏹️ 停止',
+                        pause: '⏸️ 暂停',
+                        return_to_base: '🏠 返回充电',
+                        query: '❓ 查询状态'
                     };
-                    const action = actionMap[result.parsed.action] || '其他操作';
-                    let details = `✅ 匹配到设备: <b>${result.parsed.name}</b><br>操作: ${action}`;
-                    if (result.parsed.temperature) details += `<br>温度: ${result.parsed.temperature}°C`;
-                    if (result.parsed.mode) details += `<br>模式: ${result.parsed.mode}`;
+                    const action = actionMap[p.action] || p.action || '其他操作';
+                    let details = `✅ 匹配到设备: <b>${p.name}</b> (${getTypeLabel(p.device_type)})<br>操作: ${action}`;
+                    if (p.temperature) details += `<br>温度: ${p.temperature}°C`;
+                    if (p.mode) details += `<br>模式: ${p.mode}`;
                     resultDiv.innerHTML = `<div class="alert success">${details}</div>`;
                 } else {
-                    resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令</div>';
+                    resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令。请确认设备已绑定且关键词包含在指令中。</div>';
                 }
             } catch (e) {
                 showAlert('测试失败: ' + e.message, 'error');

@@ -102,11 +102,30 @@ class HomeAssistantClient:
             if e.get("entity_id", "").startswith(f"{domain}.")
         ]
 
+    async def vacuum_start(self, entity_id: str) -> bool:
+        return await self.call_service("vacuum", "start", entity_id)
+
+    async def vacuum_stop(self, entity_id: str) -> bool:
+        return await self.call_service("vacuum", "stop", entity_id)
+
+    async def vacuum_pause(self, entity_id: str) -> bool:
+        return await self.call_service("vacuum", "pause", entity_id)
+
+    async def vacuum_return_to_base(self, entity_id: str) -> bool:
+        return await self.call_service("vacuum", "return_to_base", entity_id)
+
+    async def generic_turn_on(self, domain: str, entity_id: str) -> bool:
+        return await self.call_service(domain, "turn_on", entity_id)
+
+    async def generic_turn_off(self, domain: str, entity_id: str) -> bool:
+        return await self.call_service(domain, "turn_off", entity_id)
+
     async def discover_entities(self) -> Dict[str, List[Dict[str, Any]]]:
         entities = await self.get_all_states()
 
         categories = {
             "climate": [],
+            "vacuum": [],
             "media_player": [],
             "sensor": [],
             "switch": [],

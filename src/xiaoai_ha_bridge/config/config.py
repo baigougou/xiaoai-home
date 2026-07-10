@@ -1,6 +1,6 @@
 import json
 import os
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
 
 
@@ -26,6 +26,7 @@ class BridgeConfig(BaseModel):
 class CommandConfig(BaseModel):
     name: str = Field(..., description="设备名称")
     entity_id: str = Field(..., description="Home Assistant实体ID")
+    device_type: str = Field(default="climate", description="设备类型: climate/vacuum/light/switch/fan等")
     keywords: list = Field(..., description="触发关键词列表")
 
 
@@ -36,10 +37,13 @@ class TTSConfig(BaseModel):
 
 class AppConfig(BaseModel):
     home_assistant: HomeAssistantConfig
-    xiaomi_speaker: XiaomiSpeakerConfig
-    bridge: BridgeConfig
-    commands: Dict[str, CommandConfig]
+    xiaomi_speakers: List[XiaomiSpeakerConfig] = Field(default_factory=list, description="小爱音箱列表（支持多个）")
+    bridge: BridgeConfig = Field(default_factory=BridgeConfig)
+    commands: Dict[str, CommandConfig] = Field(default_factory=dict)
     tts: TTSConfig = Field(default_factory=TTSConfig)
+
+    def get_speaker_entity_ids(self) -> List[str]:
+        return [sp.entity_id for sp in self.xiaomi_speakers]
 
 
 class ConfigManager:
@@ -49,10 +53,31 @@ class ConfigManager:
 
     def load(self) -> AppConfig:
         if not os.path.exists(self.config_path):
-            raise FileNotFoundError(f"配置文件不存在: {self.config_path}")
+            return AppConfig(
+                home_assistant=HomeAssistantConfig(url="", api_token=""),
+                xiaomi_speakers=[],
+            )
 
         with open(self.config_path, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        if "xiaomi_speaker" in data and "xiaomi_speakers" not in data:
+            data["xiaomi_speakers"] = [data.pop("xiaomi_speaker")]
+
+        if "commands" in data:
+            for cmd_id, cmd in data["commands"].items():
+                if "device_type" not in cmd:
+                    entity_id = cmd.get("entity_id", "")
+                    if entity_id.startswith("vacuum."):
+                        cmd["device_type"] = "vacuum"
+                    elif entity_id.startswith("light."):
+                        cmd["device_type"] = "light"
+                    elif entity_id.startswith("switch."):
+                        cmd["device_type"] = "switch"
+                    elif entity_id.startswith("fan."):
+                        cmd["device_type"] = "fan"
+                    else:
+                        cmd["device_type"] = "climate"
 
         self.config = AppConfig(**data)
         return self.config

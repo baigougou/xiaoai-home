@@ -9,14 +9,14 @@ from .ha_client.client import HomeAssistantClient
 from .engine.interceptor import CommandInterceptor
 from .miservice.poller import SpeakerPoller
 from .logging.logger import setup_logging
-from .web.routes import router
+from .web.routes import router, set_services
 
 logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="XiaoAI Home Assistant Bridge",
     description="通过小爱音箱语音控制第三方智能家居设备",
-    version="0.1.0"
+    version="0.2.0"
 )
 
 app.add_middleware(
@@ -40,7 +40,7 @@ async def startup_event():
     global ha_client, interceptor, poller, config
 
     setup_logging("INFO", "config/app.log")
-    logger.info("XiaoAI Home Assistant Bridge 启动中...")
+    logger.info("XiaoAI Home Assistant Bridge v0.2.0 启动中...")
 
     config_manager = ConfigManager()
     try:
@@ -49,6 +49,17 @@ async def startup_event():
     except FileNotFoundError:
         logger.warning("配置文件不存在，请访问 Web 界面进行配置")
         config = None
+        set_services(None, None)
+        return
+
+    if not config.home_assistant.url or not config.home_assistant.api_token:
+        logger.warning("Home Assistant 未配置，请访问 Web 界面配置")
+        set_services(None, None)
+        return
+
+    if not config.xiaomi_speakers:
+        logger.warning("未配置小爱音箱，请在 Web 界面添加音箱实体")
+        set_services(None, None)
         return
 
     ha_client = HomeAssistantClient(config.home_assistant)
@@ -60,7 +71,10 @@ async def startup_event():
     else:
         logger.warning("连接 Home Assistant 失败，请检查配置")
 
+    set_services(poller, interceptor)
+
     poller = SpeakerPoller(config, ha_client, on_command=interceptor.intercept)
+    set_services(poller, interceptor)
     asyncio.create_task(poller.start())
 
     logger.info(f"服务已启动，监听 http://{config.bridge.host}:{config.bridge.port}")
@@ -92,10 +106,10 @@ if __name__ == "__main__":
             reload=cfg.bridge.debug
         )
     except FileNotFoundError:
-        print("配置文件不存在，请复制 config/config-example.json 为 config/config.json")
+        print("配置文件不存在，请访问 Web 界面进行配置")
         uvicorn.run(
             "xiaoai_ha_bridge.main:app",
             host="0.0.0.0",
             port=8000,
-            reload=True
+            reload=False
         )

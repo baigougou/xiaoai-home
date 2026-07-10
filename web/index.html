@@ -42,10 +42,14 @@
         .type-vacuum { background: #fef7e0; color: #b06000; }
         .type-light { background: #fce8e6; color: #c5221f; }
         .type-switch { background: #e6f4ea; color: #137333; }
-        .type-fan { background: #e6f4ea; color: #137333; }
+        .type-fan { background: #e8f5e9; color: #2e7d32; }
+        .type-refrigerator { background: #e3f2fd; color: #1565c0; }
+        .type-dishwasher { background: #f3e5f5; color: #7b1fa2; }
+        .type-washing_machine { background: #e0f7fa; color: #00838f; }
+        .type-dryer { background: #fff3e0; color: #ef6c00; }
+        .type-other { background: #f5f5f5; color: #616161; }
         .type-media_player { background: #f3e8fd; color: #7627bb; }
         .type-sensor { background: #f1f3f4; color: #5f6368; }
-        .type-other { background: #f1f3f4; color: #5f6368; }
         .domain-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
         .domain-tab { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; background: white; font-size: 13px; }
         .domain-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
@@ -80,11 +84,19 @@
         .checkbox { width: 18px; height: 18px; cursor: pointer; }
         .hint { font-size: 12px; color: #666; margin-top: 4px; }
         .type-select { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px; }
+        .rooms-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
+        .rooms-section h4 { font-size: 13px; color: #666; margin-bottom: 8px; }
+        .room-item { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+        .room-item input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        .room-item .room-name { width: 100px; }
+        .room-item .room-id { width: 80px; }
+        .add-room { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+        .add-room input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接 v0.2.0</h1>
+        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接 v0.2.3</h1>
     </div>
     <div class="container">
         <div id="alert-area"></div>
@@ -127,6 +139,34 @@
             </div>
         </div>
 
+        <div class="card" id="notify-card" style="display: none;">
+            <h2>📱 手机通知配置（支持多选）</h2>
+            <p style="color: #666; margin-bottom: 12px; font-size: 13px;">设备操作完成后会发送手机通知，可以勾选多个设备同时推送，需要先安装HA手机APP并登录。通知格式例如："已经打开小孩空调，模式制冷温度26度"</p>
+            <div class="form-group">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <label style="margin: 0;">通知设备</label>
+                    <button class="btn btn-secondary" onclick="discoverNotifyServices()" style="padding: 4px 12px; font-size: 13px;">🔍 刷新列表</button>
+                    <button class="btn btn-secondary" onclick="selectAllNotify()" style="padding: 4px 12px; font-size: 13px;">全选</button>
+                    <button class="btn btn-secondary" onclick="deselectAllNotify()" style="padding: 4px 12px; font-size: 13px;">清空</button>
+                </div>
+                <div id="notify-services-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 8px; background: #fafafa;">
+                    <div style="color: #999; font-size: 13px;">点击「🔍刷新列表」获取手机通知服务</div>
+                </div>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="notify-clean-complete" checked style="width: auto;">
+                <label for="notify-clean-complete" style="margin: 0;">清扫完成后发送通知（同时也会通过小爱音箱TTS播报）</label>
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+                <label>测试消息（可选，自定义测试内容）</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="notify-test-message" placeholder="例如：已经打开小孩空调，模式制冷温度26度" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button class="btn btn-primary" onclick="testNotification()">📱 发送测试通知</button>
+                </div>
+                <p class="hint">点击按钮会向所有选中的设备发送测试消息。</p>
+            </div>
+        </div>
+
         <div class="card" id="entities-card" style="display: none;">
             <h2>📱 设备绑定配置</h2>
             <p style="color: #666; margin-bottom: 16px; font-size: 13px;">选择设备实体添加绑定，给每个设备设置语音触发关键词/别名即可。支持空调、扫地机器人、灯、开关、风扇等。</p>
@@ -157,11 +197,12 @@
             <h2>🧪 指令测试</h2>
             <div class="form-group">
                 <label>输入语音指令测试</label>
-                <input type="text" id="test-text" placeholder="例如: 打开主卧空调、扫地机器人开始清扫、扫地机器人回充" onkeypress="if(event.key==='Enter')testCommand()">
+                <input type="text" id="test-text" placeholder="例如: 打开主卧空调、打扫餐厅、洗碗机状态、冰箱多少度、洗衣机还要多久" onkeypress="if(event.key==='Enter')testCommand()">
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
                 <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
-                <span style="font-size: 12px; color: #666; align-self: center;">提示：扫地机器人支持"开始清扫"、"停止"、"暂停"、"回充"、"状态"等指令</span>
+                <button class="btn btn-primary" onclick="executeCommand()">🚀 执行指令</button>
+                <span style="font-size: 12px; color: #666; align-self: center;">提示：「测试解析」只验证匹配，「执行指令」会真正控制设备+TTS播报+手机通知</span>
             </div>
             <div id="test-result" style="margin-top: 12px;"></div>
         </div>
@@ -187,10 +228,10 @@
             if (entityId.startsWith('climate.')) return 'climate';
             if (entityId.startsWith('vacuum.')) return 'vacuum';
             if (entityId.startsWith('light.')) return 'light';
-            if (entityId.startsWith('switch.')) return 'switch';
             if (entityId.startsWith('fan.')) return 'fan';
             if (entityId.startsWith('media_player.')) return 'media_player';
             if (entityId.startsWith('sensor.')) return 'sensor';
+            if (entityId.startsWith('switch.')) return 'switch';
             return 'other';
         }
 
@@ -201,6 +242,10 @@
                 light: '灯',
                 switch: '开关',
                 fan: '风扇',
+                refrigerator: '冰箱',
+                dishwasher: '洗碗机',
+                washing_machine: '洗衣机',
+                dryer: '烘干机',
                 media_player: '媒体',
                 sensor: '传感器',
                 other: '其他'
@@ -222,11 +267,20 @@
                         ? config.xiaomi_speakers[0].play_text_service || 'xiaomi_miot_raw.play_text'
                         : 'xiaomi_miot_raw.play_text';
                     
+                    let savedNotifyServices = config.tts?.notify_services || [];
+                    if (savedNotifyServices.length === 0 && config.tts?.notify_service) {
+                        savedNotifyServices = [config.tts.notify_service];
+                    }
+                    window._savedNotifyServices = savedNotifyServices;
+                    document.getElementById('notify-clean-complete').checked = config.tts?.notify_on_clean_complete !== false;
+                    
                     selectedSpeakers = (config.xiaomi_speakers || []).map(sp => sp.entity_id);
                     bindings = config.commands || {};
                     
                     if (config.home_assistant.url && config.home_assistant.api_token) {
                         await discoverEntities();
+                        await discoverNotifyServices();
+                        document.getElementById('notify-card').style.display = 'block';
                     }
                 }
             } catch (e) {
@@ -256,8 +310,10 @@
                     renderDomainTabs();
                     renderEntities();
                     renderSpeakerList();
+                    await discoverNotifyServices();
                     document.getElementById('entities-card').style.display = 'block';
                     document.getElementById('speaker-card').style.display = 'block';
+                    document.getElementById('notify-card').style.display = 'block';
                     document.getElementById('test-card').style.display = 'block';
                 } else {
                     showAlert('❌ 连接失败: ' + (result.error || '未知错误'), 'error');
@@ -465,6 +521,42 @@
                     </span>
                 `).join('');
 
+                let roomsHtml = '';
+                if (type === 'vacuum') {
+                    if (!binding.rooms) binding.rooms = {};
+                    const roomEntries = Object.entries(binding.rooms);
+                    const roomItems = roomEntries.map(([roomKey, room], idx) => `
+                        <div class="room-item">
+                            <input type="text" class="room-name" value="${room.name}" placeholder="房间名称" onchange="updateRoom('${key}', '${roomKey}', 'name', this.value)">
+                            <input type="number" class="room-id" value="${room.segment_id}" placeholder="区域ID" onchange="updateRoom('${key}', '${roomKey}', 'segment_id', parseInt(this.value))">
+                            <select style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;" onchange="updateRoom('${key}', '${roomKey}', 'clean_mode', this.value)">
+                                <option value="sweep_and_mop" ${room.clean_mode==='sweep_and_mop'?'selected':''}>扫拖</option>
+                                <option value="sweep" ${room.clean_mode==='sweep'?'selected':''}>仅清扫</option>
+                                <option value="mop" ${room.clean_mode==='mop'?'selected':''}>仅拖地</option>
+                            </select>
+                            <input type="number" value="${room.repeats || 1}" min="1" max="3" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;" onchange="updateRoom('${key}', '${roomKey}', 'repeats', parseInt(this.value))" title="清扫次数">
+                            <span style="font-size:11px;color:#666;">次</span>
+                            <button class="btn btn-danger btn-small" onclick="removeRoom('${key}', '${roomKey}')">删除</button>
+                        </div>
+                    `).join('');
+
+                    roomsHtml = `
+                        <div class="rooms-section">
+                            <h4>🏠 房间区域配置（配置后可以直接说"打扫餐厅"等指定区域清扫）</h4>
+                            <div style="margin-bottom: 10px;">
+                                <button class="btn btn-primary btn-small" onclick="fetchRoomsFromHA('${key}', '${binding.entity_id}')">🔍 从HA自动获取房间列表</button>
+                                <span class="hint" style="margin-left: 8px;">点击自动从扫地机器人获取已编辑的房间，无需手动输入ID</span>
+                            </div>
+                            ${roomItems}
+                            <div class="add-room">
+                                <input type="text" id="room-name-${key}" placeholder="房间名称，如：餐厅" style="width:120px;">
+                                <input type="number" id="room-id-${key}" placeholder="区域ID" style="width:100px;">
+                                <button class="btn btn-secondary btn-small" onclick="addRoom('${key}')">➕ 添加房间</button>
+                            </div>
+                        </div>
+                    `;
+                }
+
                 html += `
                     <div class="binding-item">
                         <div class="binding-header">
@@ -474,11 +566,15 @@
                             </span>
                             <div>
                                 <select class="type-select" onchange="changeDeviceType('${key}', this.value)">
-                                    <option value="climate" ${type==='climate'?'selected':''}>空调</option>
-                                    <option value="vacuum" ${type==='vacuum'?'selected':''}>扫地机器人</option>
-                                    <option value="light" ${type==='light'?'selected':''}>灯</option>
-                                    <option value="switch" ${type==='switch'?'selected':''}>开关</option>
-                                    <option value="fan" ${type==='fan'?'selected':''}>风扇</option>
+                                    <option value="climate" ${type==='climate'?'selected':''}>❄️ 空调</option>
+                                    <option value="vacuum" ${type==='vacuum'?'selected':''}>🤖 扫地机器人</option>
+                                    <option value="light" ${type==='light'?'selected':''}>💡 灯</option>
+                                    <option value="switch" ${type==='switch'?'selected':''}>🔌 开关</option>
+                                    <option value="fan" ${type==='fan'?'selected':''}>🌀 风扇</option>
+                                    <option value="refrigerator" ${type==='refrigerator'?'selected':''}>🧊 冰箱</option>
+                                    <option value="dishwasher" ${type==='dishwasher'?'selected':''}>🍽️ 洗碗机</option>
+                                    <option value="washing_machine" ${type==='washing_machine'?'selected':''}>👕 洗衣机</option>
+                                    <option value="dryer" ${type==='dryer'?'selected':''}>🔥 烘干机</option>
                                 </select>
                                 <button class="btn btn-danger btn-small" onclick="removeBinding('${key}')" style="margin-left: 8px;">删除</button>
                             </div>
@@ -491,10 +587,55 @@
                             <input type="text" id="input-${key}" placeholder="添加关键词/别名..." onkeypress="if(event.key==='Enter')addKeyword('${key}')">
                             <button class="btn btn-secondary btn-small" onclick="addKeyword('${key}')">添加</button>
                         </div>
+                        ${roomsHtml}
                     </div>
                 `;
             }
             list.innerHTML = html;
+        }
+
+        function addRoom(bindingKey) {
+            const nameInput = document.getElementById(`room-name-${bindingKey}`);
+            const idInput = document.getElementById(`room-id-${bindingKey}`);
+            const roomName = nameInput.value.trim();
+            const segmentId = parseInt(idInput.value);
+            
+            if (!roomName || isNaN(segmentId)) {
+                showAlert('请填写房间名称和区域ID', 'error');
+                return;
+            }
+            
+            if (!bindings[bindingKey].rooms) {
+                bindings[bindingKey].rooms = {};
+            }
+            
+            const roomKey = roomName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+            bindings[bindingKey].rooms[roomKey] = {
+                name: roomName,
+                segment_id: segmentId,
+                clean_mode: 'sweep_and_mop',
+                repeats: 1
+            };
+            
+            nameInput.value = '';
+            idInput.value = '';
+            renderBindings();
+            showAlert(`已添加房间: ${roomName} (ID: ${segmentId})`, 'success');
+        }
+
+        function updateRoom(bindingKey, roomKey, field, value) {
+            if (bindings[bindingKey] && bindings[bindingKey].rooms && bindings[bindingKey].rooms[roomKey]) {
+                bindings[bindingKey].rooms[roomKey][field] = value;
+            }
+        }
+
+        function removeRoom(bindingKey, roomKey) {
+            if (bindings[bindingKey] && bindings[bindingKey].rooms) {
+                const roomName = bindings[bindingKey].rooms[roomKey]?.name || roomKey;
+                delete bindings[bindingKey].rooms[roomKey];
+                renderBindings();
+                showAlert(`已删除房间: ${roomName}`, 'info');
+            }
         }
 
         function changeDeviceType(key, type) {
@@ -532,6 +673,8 @@
             const token = document.getElementById('ha-token').value;
             const execService = document.getElementById('execute-service').value;
             const playService = document.getElementById('play-service').value;
+            const notifyServices = getSelectedNotifyServices();
+            const notifyCleanComplete = document.getElementById('notify-clean-complete').checked;
 
             if (!url || !token) {
                 showAlert('请填写 URL 和 Token', 'error');
@@ -557,6 +700,15 @@
                 if (!b.keywords || b.keywords.length === 0) {
                     b.keywords = [b.name];
                 }
+                if (b.device_type === 'vacuum' && !b.rooms) {
+                    b.rooms = {};
+                }
+                if (b.device_type === 'vacuum' && !b.default_clean_mode) {
+                    b.default_clean_mode = 'sweep_and_mop';
+                }
+                if (b.device_type === 'vacuum' && !b.default_repeats) {
+                    b.default_repeats = 1;
+                }
             }
 
             const newConfig = {
@@ -569,7 +721,12 @@
                     log_level: 'INFO',
                     polling_interval: 3
                 },
-                tts: config ? config.tts : { enabled: true, volume: 50 },
+                tts: {
+                    enabled: true,
+                    volume: config?.tts?.volume || 50,
+                    notify_services: notifyServices,
+                    notify_on_clean_complete: notifyCleanComplete
+                },
                 commands: bindings
             };
 
@@ -625,22 +782,186 @@
                         turn_on: '🔛 打开设备',
                         turn_off: '🔴 关闭设备',
                         adjust: '⚙️ 调节设置',
-                        start: '▶️ 开始清扫',
+                        start: '▶️ 开始全屋清扫',
                         stop: '⏹️ 停止',
                         pause: '⏸️ 暂停',
                         return_to_base: '🏠 返回充电',
+                        clean_segment: '🧹 指定区域清扫',
                         query: '❓ 查询状态'
+                    };
+                    const cleanModeMap = {
+                        sweep: '仅清扫',
+                        sweep_and_mop: '扫拖一体',
+                        mop: '仅拖地'
                     };
                     const action = actionMap[p.action] || p.action || '其他操作';
                     let details = `✅ 匹配到设备: <b>${p.name}</b> (${getTypeLabel(p.device_type)})<br>操作: ${action}`;
                     if (p.temperature) details += `<br>温度: ${p.temperature}°C`;
-                    if (p.mode) details += `<br>模式: ${p.mode}`;
+                    if (p.mode) {
+                        const modeText = {cool:'制冷', heat:'制热', dry:'除湿', auto:'自动', fan_only:'送风'}[p.mode] || p.mode;
+                        details += `<br>模式: ${modeText}`;
+                    }
+                    if (p.room) details += `<br>房间: ${p.room}`;
+                    if (p.clean_mode) details += `<br>清扫模式: ${cleanModeMap[p.clean_mode] || p.clean_mode}`;
+                    if (p.repeats && p.repeats > 1) details += `<br>清扫次数: ${p.repeats}次`;
                     resultDiv.innerHTML = `<div class="alert success">${details}</div>`;
                 } else {
                     resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令。请确认设备已绑定且关键词包含在指令中。</div>';
                 }
             } catch (e) {
                 showAlert('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        async function discoverNotifyServices() {
+            try {
+                const resp = await fetch('/api/notify/services');
+                const result = await resp.json();
+                const listEl = document.getElementById('notify-services-list');
+                const savedServices = window._savedNotifyServices || getSelectedNotifyServices();
+                
+                if (result.success && result.services && result.services.length > 0) {
+                    listEl.innerHTML = '';
+                    for (const svc of result.services) {
+                        const item = document.createElement('label');
+                        item.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer;';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.value = svc.id;
+                        checkbox.dataset.name = svc.name;
+                        checkbox.style.width = 'auto';
+                        if (savedServices.includes(svc.id)) {
+                            checkbox.checked = true;
+                        }
+                        const span = document.createElement('span');
+                        span.textContent = svc.name;
+                        span.style.cssText = 'font-size: 14px;';
+                        item.appendChild(checkbox);
+                        item.appendChild(span);
+                        listEl.appendChild(item);
+                    }
+                    window._savedNotifyServices = null;
+                } else {
+                    listEl.innerHTML = '<div style="color: #999; font-size: 13px;">未发现通知服务，请确保已安装HA手机APP并登录</div>';
+                    showAlert('未发现通知服务，请确保已安装HA手机APP', 'info');
+                }
+            } catch (e) {
+                console.log('获取通知服务失败:', e);
+                showAlert('获取通知服务失败: ' + e.message, 'error');
+            }
+        }
+
+        function getSelectedNotifyServices() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        }
+
+        function selectAllNotify() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllNotify() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        async function testNotification() {
+            const notifyServices = getSelectedNotifyServices();
+            
+            if (notifyServices.length === 0) {
+                showAlert('请先勾选至少一个通知设备', 'error');
+                return;
+            }
+
+            const customMessage = document.getElementById('notify-test-message').value.trim();
+            const title = '🧪 测试通知';
+            const message = customMessage || '已经打开小孩空调，模式制冷温度26度';
+
+            try {
+                const resp = await fetch('/api/notify/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        notify_services: notifyServices,
+                        title: title,
+                        message: message
+                    })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showAlert(`✅ 测试通知已发送到${notifyServices.length}个设备，请检查手机！`, 'success');
+                } else {
+                    showAlert('❌ 发送失败: ' + (result.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function executeCommand() {
+            const text = document.getElementById('test-text').value;
+            if (!text) {
+                showAlert('请输入指令', 'error');
+                return;
+            }
+
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.innerHTML = '<div class="alert info">🚀 正在执行指令，请稍候...</div>';
+
+            try {
+                const resp = await fetch('/api/command/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const result = await resp.json();
+                
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="alert success">✅ 执行成功！${result.message}</div>`;
+                    showAlert('✅ 指令执行完成，检查小爱音箱和手机通知', 'success');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert error">❌ 执行失败: ${result.error || result.message || '未知错误'}</div>`;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="alert error">❌ 请求失败: ${e.message}</div>`;
+            }
+        }
+
+        async function fetchRoomsFromHA(bindingKey, entityId) {
+            if (!entityId) {
+                showAlert('未选择扫地机器人实体', 'error');
+                return;
+            }
+            showAlert('正在从HA获取房间列表...', 'info');
+            try {
+                const resp = await fetch(`/api/vacuum/rooms?entity_id=${encodeURIComponent(entityId)}`);
+                const result = await resp.json();
+                if (result.success && result.rooms && result.rooms.length > 0) {
+                    if (!bindings[bindingKey].rooms) {
+                        bindings[bindingKey].rooms = {};
+                    }
+                    let addedCount = 0;
+                    for (const room of result.rooms) {
+                        const roomKey = room.name.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+                        const exists = Object.values(bindings[bindingKey].rooms).some(r => r.segment_id === room.id);
+                        if (!exists) {
+                            bindings[bindingKey].rooms[roomKey] = {
+                                name: room.name,
+                                segment_id: room.id,
+                                clean_mode: 'sweep_and_mop',
+                                repeats: 1
+                            };
+                            addedCount++;
+                        }
+                    }
+                    renderBindings();
+                    showAlert(`✅ 已成功获取${result.rooms.length}个房间${addedCount > 0 ? `，新增${addedCount}个` : ''}，请确认后保存配置`, 'success');
+                } else {
+                    showAlert('❌ 未能获取到房间列表，请确保扫地机器人已在米家APP中编辑好房间分区，或手动添加', 'error');
+                }
+            } catch (e) {
+                showAlert('获取房间失败: ' + e.message, 'error');
             }
         }
 

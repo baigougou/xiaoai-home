@@ -40,7 +40,7 @@ async def startup_event():
     global ha_client, interceptor, poller, config
 
     setup_logging("INFO", "config/app.log")
-    logger.info("XiaoAI Home Assistant Bridge v0.2.0 启动中...")
+    logger.info("XiaoAI Home Assistant Bridge v0.2.3 启动中...")
 
     config_manager = ConfigManager()
     try:
@@ -71,9 +71,7 @@ async def startup_event():
     else:
         logger.warning("连接 Home Assistant 失败，请检查配置")
 
-    set_services(poller, interceptor)
-
-    poller = SpeakerPoller(config, ha_client, on_command=interceptor.intercept)
+    poller = SpeakerPoller(config, ha_client, on_command=interceptor.intercept, on_poll=interceptor.check_cleaning_tasks)
     set_services(poller, interceptor)
     asyncio.create_task(poller.start())
 

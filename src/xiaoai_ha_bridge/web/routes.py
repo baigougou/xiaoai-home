@@ -188,9 +188,117 @@ async def test_command(text: str = Body(..., embed=True)):
         return {"error": str(e)}
 
 
+@router.post("/api/command/execute")
+async def execute_test_command(text: str = Body(..., embed=True)):
+    try:
+        config = config_manager.load()
+        from ..ha_client.client import HomeAssistantClient
+        from ..engine.interceptor import CommandInterceptor
+
+        ha_client = HomeAssistantClient(config.home_assistant)
+        interceptor = CommandInterceptor(config, ha_client)
+        handled = await interceptor.intercept(text, None)
+        await ha_client.close()
+
+        return {
+            "success": handled,
+            "message": "指令执行成功，已发送TTS播报和手机通知" if handled else "未匹配到指令或执行失败"
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+
 @router.get("/api/health")
 async def health_check():
-    return {"status": "ok", "version": "0.2.0"}
+    return {"status": "ok", "version": "0.2.3"}
+
+
+@router.get("/api/vacuum/rooms")
+async def get_vacuum_rooms(entity_id: str):
+    try:
+        config = config_manager.load()
+        ha_client = HomeAssistantClient(config.home_assistant)
+        rooms = await ha_client.get_vacuum_rooms(entity_id)
+        await ha_client.close()
+        return {"success": True, "rooms": rooms}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "rooms": []}
+
+
+@router.get("/api/notify/services")
+async def get_notify_services():
+    try:
+        config = config_manager.load()
+        ha_client = HomeAssistantClient(config.home_assistant)
+        services = await ha_client.discover_notify_services()
+        await ha_client.close()
+        return {"success": True, "services": services}
+    except Exception as e:
+        return {"success": False, "error": str(e), "services": []}
+
+
+@router.post("/api/notify/test")
+async def test_notification(data: Dict[str, Any] = Body(...)):
+    try:
+        config = config_manager.load()
+        notify_services = data.get("notify_services") or config.tts.notify_services
+        if not notify_services:
+            single_service = data.get("notify_service", "")
+            if single_service:
+                notify_services = [single_service]
+        if not notify_services:
+            return {"success": False, "error": "未配置通知服务"}
+        
+        import httpx
+        title = data.get("title", "🧪 测试通知")
+        message = data.get("message", "这是一条来自XiaoAI HA Bridge的测试消息")
+        
+        ha_url = config.home_assistant.url.rstrip("/")
+        headers = {
+            "Authorization": f"Bearer {config.home_assistant.api_token}",
+            "Content-Type": "application/json"
+        }
+        
+        results = {}
+        success_count = 0
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            for notify_service in notify_services:
+                if not notify_service or not notify_service.startswith("notify."):
+                    results[notify_service] = {"success": False, "error": "服务格式错误"}
+                    continue
+                service_name = notify_service.split(".", 1)[1]
+                try:
+                    resp = await client.post(
+                        f"{ha_url}/api/services/notify/{service_name}",
+                        headers=headers,
+                        json={"title": title, "message": message}
+                    )
+                    if resp.status_code == 200:
+                        results[notify_service] = {"success": True}
+                        success_count += 1
+                    else:
+                        error_detail = f"HTTP {resp.status_code}"
+                        try:
+                            error_json = resp.json()
+                            error_detail += f": {error_json.get('message', str(error_json))}"
+                        except:
+                            error_detail += f": {resp.text[:200]}"
+                        results[notify_service] = {"success": False, "error": error_detail}
+                except Exception as e:
+                    results[notify_service] = {"success": False, "error": str(e)}
+        
+        if success_count > 0:
+            return {"success": True, "message": f"已向{success_count}个设备发送测试通知，请检查手机", "results": results}
+        else:
+            return {"success": False, "error": "所有通知服务发送失败", "results": results}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
 
 
 @router.post("/api/restart")

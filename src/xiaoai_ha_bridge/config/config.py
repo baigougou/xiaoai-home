@@ -23,16 +23,28 @@ class BridgeConfig(BaseModel):
     polling_interval: int = Field(default=3, description="轮询间隔（秒）")
 
 
+class VacuumRoomConfig(BaseModel):
+    name: str = Field(..., description="房间名称")
+    segment_id: int = Field(..., description="区域ID")
+    clean_mode: str = Field(default="sweep_and_mop", description="清扫模式: sweep/sweep_and_mop/mop")
+    repeats: int = Field(default=1, description="清扫次数")
+
+
 class CommandConfig(BaseModel):
     name: str = Field(..., description="设备名称")
     entity_id: str = Field(..., description="Home Assistant实体ID")
     device_type: str = Field(default="climate", description="设备类型: climate/vacuum/light/switch/fan等")
     keywords: list = Field(..., description="触发关键词列表")
+    rooms: Dict[str, VacuumRoomConfig] = Field(default_factory=dict, description="扫地机器人房间区域配置（仅vacuum类型）")
+    default_clean_mode: str = Field(default="sweep_and_mop", description="默认清扫模式")
+    default_repeats: int = Field(default=1, description="默认清扫次数")
 
 
 class TTSConfig(BaseModel):
     enabled: bool = Field(default=True, description="是否启用TTS")
     volume: int = Field(default=50, description="音量（0-100）")
+    notify_services: List[str] = Field(default_factory=list, description="手机通知服务列表，如 notify.mobile_app_xxx")
+    notify_on_clean_complete: bool = Field(default=True, description="清扫完成发送手机通知")
 
 
 class AppConfig(BaseModel):
@@ -63,6 +75,12 @@ class ConfigManager:
 
         if "xiaomi_speaker" in data and "xiaomi_speakers" not in data:
             data["xiaomi_speakers"] = [data.pop("xiaomi_speaker")]
+
+        if "tts" in data:
+            tts_data = data["tts"]
+            if "notify_service" in tts_data and "notify_services" not in tts_data:
+                old_service = tts_data.pop("notify_service")
+                tts_data["notify_services"] = [old_service] if old_service else []
 
         if "commands" in data:
             for cmd_id, cmd in data["commands"].items():

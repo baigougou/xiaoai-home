@@ -12,16 +12,19 @@ class SpeakerPoller:
         self,
         config: AppConfig,
         ha_client: HomeAssistantClient,
-        on_command: Optional[Callable[[str, str], bool]] = None
+        on_command: Optional[Callable[[str, str], bool]] = None,
+        on_poll: Optional[Callable] = None
     ):
         self.config = config
         self.ha_client = ha_client
         self.on_command = on_command
+        self.on_poll = on_poll
         self.running = False
         self.last_texts: Dict[str, str] = {}
         self.polling_interval = config.bridge.polling_interval
         self.retry_count = 0
         self.max_retries = 3
+        self.poll_count = 0
 
     def update_config(self, config: AppConfig):
         self.config = config
@@ -37,6 +40,12 @@ class SpeakerPoller:
         while self.running:
             try:
                 await self._poll_all()
+                self.poll_count += 1
+                if self.on_poll and self.poll_count % 5 == 0:
+                    try:
+                        await self.on_poll()
+                    except Exception as e:
+                        logger.debug(f"轮询回调出错: {e}")
                 self.retry_count = 0
             except Exception as e:
                 self.retry_count += 1

@@ -114,6 +114,133 @@ class HomeAssistantClient:
     async def vacuum_return_to_base(self, entity_id: str) -> bool:
         return await self.call_service("vacuum", "return_to_base", entity_id)
 
+    async def vacuum_clean_segment(self, entity_id: str, segment_ids: List[int], repeats: int = 1, clean_mode: str = "sweep_and_mop") -> bool:
+        clean_mode_map = {
+            "sweep": 0,
+            "sweep_and_mop": 1,
+            "mop": 2,
+        }
+        mop_mode = clean_mode_map.get(clean_mode, 1)
+        params = [{"segments": segment_ids, "repeat": repeats, "clean_mode": mop_mode}]
+        return await self.call_service("vacuum", "send_command", entity_id, {
+            "command": "app_segment_clean",
+            "params": params
+        })
+
+    async def get_vacuum_rooms(self, entity_id: str) -> List[Dict[str, Any]]:
+        rooms = []
+        seen_ids = set()
+        
+        state = await self.get_state(entity_id)
+        if state:
+            attributes = state.get("attributes", {})
+            
+            for key in ["rooms", "segments", "room_list", "segment_list"]:
+                if key in attributes and isinstance(attributes[key], (list, dict)):
+                    data = attributes[key]
+                    if isinstance(data, dict):
+                        for map_name, map_rooms in data.items():
+                            if isinstance(map_rooms, list):
+                                for item in map_rooms:
+                                    if isinstance(item, dict):
+                                        room_id = item.get("id") or item.get("segment_id") or item.get("uid")
+                                        room_name = item.get("name") or item.get("room_name") or f"区域{room_id}"
+                                        if room_id is not None and int(room_id) not in seen_ids:
+                                            seen_ids.add(int(room_id))
+                                            rooms.append({"id": int(room_id), "name": str(room_name), "map": map_name})
+                            elif isinstance(map_rooms, dict):
+                                for rid, rname in map_rooms.items():
+                                    try:
+                                        rid_int = int(rid)
+                                        if rid_int not in seen_ids:
+                                            seen_ids.add(rid_int)
+                                            if isinstance(rname, str):
+                                                rooms.append({"id": rid_int, "name": str(rname), "map": map_name})
+                                            elif isinstance(rname, dict):
+                                                rn = rname.get("name", f"区域{rid}")
+                                                rooms.append({"id": rid_int, "name": str(rn), "map": map_name})
+                                    except (ValueError, TypeError):
+                                        pass
+                    elif isinstance(data, list):
+                        for item in data:
+                            if isinstance(item, dict):
+                                room_id = item.get("id") or item.get("segment_id") or item.get("uid")
+                                room_name = item.get("name") or item.get("room_name") or f"区域{room_id}"
+                                if room_id is not None and int(room_id) not in seen_ids:
+                                    seen_ids.add(int(room_id))
+                                    rooms.append({"id": int(room_id), "name": str(room_name)})
+                            elif isinstance(item, (int, str)):
+                                try:
+                                    rid_int = int(item)
+                                    if rid_int not in seen_ids:
+                                        seen_ids.add(rid_int)
+                                        rooms.append({"id": rid_int, "name": f"区域{item}"})
+                                except (ValueError, TypeError):
+                                    pass
+                    break
+        
+        return rooms
+
+    async def discover_notify_services(self) -> List[Dict[str, str]]:
+        try:
+            services_resp = await self.client.get(f"{self.url}/api/services", headers=self.headers)
+            if services_resp.status_code == 200:
+                services = services_resp.json()
+                notify_services = []
+                for domain_data in services:
+                    domain = domain_data.get("domain", "")
+                    if domain == "notify":
+                        services_dict = domain_data.get("services", {})
+                        if isinstance(services_dict, dict):
+                            for service_name in services_dict.keys():
+                                service_id = f"notify.{service_name}"
+                                if service_name.startswith("mobile_app_"):
+                                    friendly_name = "📱 " + service_name.replace("mobile_app_", "").replace("_", " ").title()
+                                else:
+                                    friendly_name = service_name.replace("_", " ").title()
+                                notify_services.append({"id": service_id, "name": friendly_name})
+                logger.info(f"发现 {len(notify_services)} 个通知服务")
+                return notify_services
+            return []
+        except Exception as e:
+            logger.error(f"获取通知服务列表失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
+
+    async def send_notification(self, notify_service: str, title: str, message: str) -> bool:
+        if not notify_service or not notify_service.startswith("notify."):
+            return False
+        try:
+            parts = notify_service.split(".", 1)
+            domain = parts[0]
+            service = parts[1]
+            payload = {
+                "title": title,
+                "message": message
+            }
+            response = await self.client.post(
+                f"{self.url}/api/services/{domain}/{service}",
+                headers=self.headers,
+                json=payload
+            )
+            response.raise_for_status()
+            logger.info(f"通知发送成功 {notify_service}")
+            return True
+        except httpx.HTTPStatusError as e:
+            logger.error(f"发送通知失败 {notify_service}: {e.response.status_code} - {e.response.text}")
+            return False
+        except Exception as e:
+            logger.error(f"发送通知异常 {notify_service}: {e}")
+            return False
+
+    async def send_notifications(self, notify_services: List[str], title: str, message: str) -> Dict[str, bool]:
+        results = {}
+        for service in notify_services:
+            if service and service.startswith("notify."):
+                results[service] = await self.send_notification(service, title, message)
+        return results
+
     async def generic_turn_on(self, domain: str, entity_id: str) -> bool:
         return await self.call_service(domain, "turn_on", entity_id)
 

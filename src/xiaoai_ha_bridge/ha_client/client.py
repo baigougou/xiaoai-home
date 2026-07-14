@@ -77,10 +77,18 @@ class HomeAssistantClient:
         hvac_mode = mode_map.get(mode, "auto")
         return await self.call_service("climate", "set_hvac_mode", entity_id, {"hvac_mode": hvac_mode})
 
-    async def execute_text(self, entity_id: str, text: str) -> bool:
+    async def execute_text(self, entity_id: str, text: str, service: str = None) -> bool:
+        """执行文本指令，支持自定义服务名"""
+        if service and "." in service:
+            domain, svc = service.split(".", 1)
+            return await self.call_service(domain, svc, entity_id, {"text": text})
         return await self.call_service("xiaomi_miot_raw", "execute_text", entity_id, {"text": text})
 
-    async def play_text(self, entity_id: str, text: str) -> bool:
+    async def play_text(self, entity_id: str, text: str, service: str = None) -> bool:
+        """播放TTS文本，支持自定义服务名"""
+        if service and "." in service:
+            domain, svc = service.split(".", 1)
+            return await self.call_service(domain, svc, entity_id, {"text": text})
         return await self.call_service("xiaomi_miot_raw", "play_text", entity_id, {"text": text})
 
     async def get_all_states(self) -> List[Dict[str, Any]]:

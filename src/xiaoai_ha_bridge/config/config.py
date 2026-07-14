@@ -8,6 +8,11 @@ class HomeAssistantConfig(BaseModel):
     url: str = Field(..., description="Home Assistant URL")
     api_token: str = Field(..., description="Long-lived access token")
 
+    def model_post_init(self, __context):
+        # 清理 URL 中的反引号
+        if self.url:
+            self.url = self.url.strip().strip('`')
+
 
 class XiaomiSpeakerConfig(BaseModel):
     entity_id: str = Field(..., description="小爱音箱实体ID")
@@ -84,6 +89,12 @@ class ConfigManager:
 
         if "commands" in data:
             for cmd_id, cmd in data["commands"].items():
+                # 清理命令中的额外字段
+                extra_fields = ["fridge_sensors", "self_clean_entities", "appliance_sensors"]
+                for field in extra_fields:
+                    if field in cmd:
+                        del cmd[field]
+                
                 if "device_type" not in cmd:
                     entity_id = cmd.get("entity_id", "")
                     if entity_id.startswith("vacuum."):

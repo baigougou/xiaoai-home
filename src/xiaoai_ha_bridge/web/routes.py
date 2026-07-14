@@ -143,6 +143,15 @@ async def discover_entities():
         config = config_manager.load()
     except FileNotFoundError:
         raise HTTPException(status_code=400, detail="请先配置 Home Assistant 连接信息")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"加载配置失败: {str(e)}")
+
+    # 清理 URL 中的反引号
+    ha_url = config.home_assistant.url.strip().strip('`')
+    if not ha_url or not ha_url.startswith('http'):
+        raise HTTPException(status_code=400, detail="Home Assistant URL 格式不正确，请检查配置")
 
     try:
         ha_client = HomeAssistantClient(config.home_assistant)
@@ -150,6 +159,8 @@ async def discover_entities():
         await ha_client.close()
         return entities
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"发现实体失败: {str(e)}")
 
 
@@ -212,7 +223,7 @@ async def execute_test_command(text: str = Body(..., embed=True)):
 
 @router.get("/api/health")
 async def health_check():
-    return {"status": "ok", "version": "0.2.3"}
+    return {"status": "ok", "version": "0.2.4"}
 
 
 @router.get("/api/vacuum/rooms")

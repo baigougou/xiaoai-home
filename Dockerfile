@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY src/ ./src/
 COPY config/ ./config/
+COPY web/ ./web/
 
 RUN pip install --no-cache-dir \
     fastapi \

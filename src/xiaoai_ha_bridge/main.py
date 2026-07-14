@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="XiaoAI Home Assistant Bridge",
     description="通过小爱音箱语音控制第三方智能家居设备",
-    version="0.2.0"
+    version="0.2.4"
 )
 
 app.add_middleware(

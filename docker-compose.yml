@@ -2,7 +2,6 @@ version: '3.8'
 
 services:
   xiaoai-home-assistant:
-    build: .
     image: xiaoai-home-assistant:latest
     container_name: xiaoai-ha-bridge
     restart: unless-stopped

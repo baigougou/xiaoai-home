@@ -73,14 +73,21 @@ class SpeakerPoller:
         if not state:
             return
 
-        attributes = state.get("attributes", {})
-
         text = ""
-        for key in ["last_text", "current_text", "text", "media_title", "conversation_content", "last_command"]:
-            if key in attributes and attributes[key]:
-                text = str(attributes[key]).strip()
-                if text:
-                    break
+        
+        # 优先从 state 值读取（sensor.xiaomi_lx06_xxx_conversation 类型）
+        state_value = state.get("state", "")
+        if state_value and state_value != "unavailable" and state_value != "unknown":
+            text = str(state_value).strip()
+        
+        # 如果没有，从 attributes 读取（media_player 类型）
+        if not text:
+            attributes = state.get("attributes", {})
+            for key in ["last_text", "current_text", "text", "media_title", "conversation_content", "last_command", "last_speech"]:
+                if key in attributes and attributes[key]:
+                    text = str(attributes[key]).strip()
+                    if text:
+                        break
 
         if not text:
             return

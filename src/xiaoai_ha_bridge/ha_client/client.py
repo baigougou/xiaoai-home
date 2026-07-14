@@ -84,6 +84,11 @@ class HomeAssistantClient:
             return await self.call_service(domain, svc, entity_id, {"text": text})
         return await self.call_service("xiaomi_miot_raw", "execute_text", entity_id, {"text": text})
 
+    async def send_command_to_speaker(self, entity_id: str, text: str) -> bool:
+        """直接发送指令给小爱音箱执行（绕过小爱自身的指令处理）"""
+        logger.info(f"直接发送指令给音箱 {entity_id}: {text}")
+        return await self.execute_text(entity_id, text)
+
     async def play_text(self, entity_id: str, text: str, service: str = None) -> bool:
         """播放TTS文本，支持自定义服务名"""
         if service and "." in service:

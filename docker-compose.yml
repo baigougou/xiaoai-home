@@ -5,7 +5,6 @@ services:
     build:
       context: https://github.com/baigougou/xiaoai-home.git#main
       dockerfile: Dockerfile
-    image: xiaoai-home-assistant:latest
     container_name: xiaoai-ha-bridge
     restart: unless-stopped
     ports:

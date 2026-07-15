@@ -17,13 +17,13 @@ RUN pip install --no-cache-dir \
     pydantic \
     python-dotenv
 
-EXPOSE 8000
+EXPOSE 18015
 
 VOLUME ["/app/config"]
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health || exit 1
+    CMD curl -f http://localhost:18015/api/health || exit 1
 
 ENV PYTHONPATH=/app/src
 
-CMD ["python", "-m", "uvicorn", "xiaoai_ha_bridge.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "xiaoai_ha_bridge.main:app", "--host", "0.0.0.0", "--port", "18015"]

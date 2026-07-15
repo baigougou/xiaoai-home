@@ -91,7 +91,7 @@ docker-compose up -d --build
 
 #### 步骤 4：访问 Web 界面进行配置
 
-打开浏览器访问：`http://你的NAS-IP:8000`
+打开浏览器访问：`http://你的NAS-IP:18015`
 
 在 Web 界面中：
 1. 填写 Home Assistant URL（例如 `http://192.168.1.100:8123`）
@@ -119,13 +119,13 @@ pip install fastapi uvicorn[standard] httpx pydantic python-dotenv
 
 # 启动服务（Windows PowerShell）
 $env:PYTHONPATH="src"
-python -m uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 18015 --reload
 
 # 启动服务（Linux/macOS）
-PYTHONPATH=src python -m uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 8000 --reload
+PYTHONPATH=src python -m uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port 18015 --reload
 ```
 
-访问 http://localhost:8000 进行配置。
+访问 http://localhost:18015 进行配置。
 
 ---
 
@@ -167,7 +167,7 @@ PYTHONPATH=src python -m uvicorn xiaoai_ha_bridge.main:app --host 0.0.0.0 --port
   },
   "bridge": {
     "host": "0.0.0.0",
-    "port": 8000,
+    "port": 18015,
     "debug": false,
     "log_level": "INFO",
     "polling_interval": 3
@@ -241,7 +241,7 @@ docker exec -it xiaoai-home-assistant bash
 ## 常见问题
 
 ### 1. 容器启动后无法访问 Web 界面？
-- 检查 NAS 防火墙是否开放 8000 端口
+- 检查 NAS 防火墙是否开放 18015 端口
 - 确认 docker-compose.yml 中端口映射正确
 - 查看日志：`docker-compose logs`
 

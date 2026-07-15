@@ -22,7 +22,7 @@ class XiaomiSpeakerConfig(BaseModel):
 
 class BridgeConfig(BaseModel):
     host: str = Field(default="0.0.0.0", description="服务监听地址")
-    port: int = Field(default=8000, description="服务监听端口")
+    port: int = Field(default=18015, description="服务监听端口")
     debug: bool = Field(default=False, description="调试模式")
     log_level: str = Field(default="INFO", description="日志级别")
     polling_interval: int = Field(default=3, description="轮询间隔（秒）")

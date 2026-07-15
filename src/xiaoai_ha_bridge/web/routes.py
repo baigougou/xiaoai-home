@@ -40,7 +40,7 @@ async def get_config():
             "xiaomi_speakers": [],
             "bridge": {
                 "host": "0.0.0.0",
-                "port": 8000,
+                "port": 18015,
                 "debug": False,
                 "log_level": "INFO",
                 "polling_interval": 3

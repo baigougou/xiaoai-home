@@ -263,6 +263,12 @@ async def get_commands_list():
                 "dishwasher": [],
                 "washing_machine": [],
                 "dryer": [],
+                "stove": [],
+                "range_hood": [],
+                "water_heater": [],
+                "air_purifier": [],
+                "humidifier": [],
+                "cover": [],
                 "other": [],
             },
             "all_commands": []
@@ -278,6 +284,12 @@ async def get_commands_list():
             "dishwasher": "洗碗机",
             "washing_machine": "洗衣机",
             "dryer": "烘干机",
+            "stove": "灶台",
+            "range_hood": "油烟机",
+            "water_heater": "热水器",
+            "air_purifier": "空气净化器",
+            "humidifier": "加湿器",
+            "cover": "窗帘",
         }
         
         for cmd_id, cmd in commands.items():

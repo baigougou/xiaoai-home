@@ -281,6 +281,10 @@ class HomeAssistantClient:
             "notify": [],
             "cover": [],
             "humidifier": [],
+            "refrigerator": [],
+            "dishwasher": [],
+            "water_heater": [],
+            "air_purifier": [],
             "other": [],
         }
 
@@ -364,11 +368,15 @@ class HomeAssistantClient:
             elif domain == "switch":
                 washing_machine_keywords = ["洗衣机", "washing_machine", "washer"]
                 dryer_keywords = ["烘干机", "干衣机", "dryer"]
-                stove_keywords = ["灶台", "燃气灶", "煤气灶", "stove"]
+                stove_keywords = ["灶台", "燃气灶", "煤气灶", "stove", "gas"]
                 range_hood_keywords = ["抽油烟机", "油烟机", "range_hood", "hood"]
                 bathroom_heater_keywords = ["浴霸"]
                 smart_socket_keywords = ["插座", "smart_plug", "smart_socket"]
                 humidifier_keywords = ["加湿器", "humidifier"]
+                refrigerator_keywords = ["冰箱", "refrigerator", "fridge"]
+                dishwasher_keywords = ["洗碗机", "dishwasher"]
+                water_heater_keywords = ["热水器", "water_heater", "heater"]
+                air_purifier_keywords = ["空气净化器", "净化器", "air_purifier", "purifier"]
                 
                 if any(kw in name_lower for kw in washing_machine_keywords):
                     category = "washing_machine"
@@ -384,6 +392,14 @@ class HomeAssistantClient:
                     category = "smart_socket"
                 elif any(kw in name_lower for kw in humidifier_keywords):
                     category = "humidifier"
+                elif any(kw in name_lower for kw in refrigerator_keywords):
+                    category = "refrigerator"
+                elif any(kw in name_lower for kw in dishwasher_keywords):
+                    category = "dishwasher"
+                elif any(kw in name_lower for kw in water_heater_keywords):
+                    category = "water_heater"
+                elif any(kw in name_lower for kw in air_purifier_keywords):
+                    category = "air_purifier"
                 else:
                     category = "switch"
             elif domain == "humidifier":

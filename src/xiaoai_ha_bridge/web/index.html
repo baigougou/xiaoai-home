@@ -3,248 +3,451 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XiaoAI HA Bridge - 配置管理</title>
+    <title>XiaoAI HA Bridge - 小爱音箱智能家居桥接</title>
     <style>
+        :root {
+            --bg-primary: #0a0f1a;
+            --bg-secondary: #111827;
+            --bg-card: #1a2234;
+            --bg-card-hover: #222d42;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --accent-blue: #3b82f6;
+            --accent-blue-hover: #2563eb;
+            --accent-green: #10b981;
+            --accent-green-hover: #059669;
+            --accent-yellow: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-purple: #8b5cf6;
+            --accent-cyan: #06b6d4;
+            --border-color: #2d3a4f;
+            --border-color-light: #3d4a5f;
+            --radius: 12px;
+            --radius-lg: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+            --shadow-card: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+        }
+
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
-        .header { background: #1a73e8; color: white; padding: 16px 24px; }
-        .header h1 { font-size: 20px; font-weight: 500; }
-        .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
-        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.12); padding: 24px; margin-bottom: 24px; }
-        .card h2 { font-size: 18px; margin-bottom: 16px; color: #1a73e8; }
-        .form-group { margin-bottom: 16px; }
-        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        .form-group input:focus, .form-group select:focus { outline: none; border-color: #1a73e8; }
-        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-        .btn { padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; cursor: pointer; font-weight: 500; }
-        .btn-primary { background: #1a73e8; color: white; }
-        .btn-primary:hover { background: #1557b0; }
-        .btn-success { background: #34a853; color: white; }
-        .btn-success:hover { background: #2d8e47; }
-        .btn-danger { background: #ea4335; color: white; }
-        .btn-danger:hover { background: #c5221f; }
-        .btn-secondary { background: #f1f3f4; color: #333; }
-        .btn-secondary:hover { background: #e8eaed; }
-        .btn-small { padding: 4px 10px; font-size: 12px; }
-        .alert { padding: 12px 16px; border-radius: 4px; margin-bottom: 16px; }
-        .alert.success { background: #e6f4ea; color: #137333; }
-        .alert.error { background: #fce8e6; color: #c5221f; }
-        .alert.info { background: #e8f0fe; color: #1967d2; }
-        .device-list { margin-top: 16px; }
-        .device-item { display: flex; align-items: center; padding: 12px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; gap: 12px; }
-        .device-item .keyword-input { flex: 1; }
-        .device-item .device-info { flex: 2; }
-        .device-item .device-name { font-weight: 500; }
-        .device-item .entity-id { font-size: 12px; color: #666; font-family: monospace; }
-        .device-item .device-type { font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: 500; }
-        .type-climate { background: #e8f0fe; color: #1967d2; }
-        .type-vacuum { background: #fef7e0; color: #b06000; }
-        .type-light { background: #fce8e6; color: #c5221f; }
-        .type-switch { background: #e6f4ea; color: #137333; }
-        .type-fan { background: #e8f5e9; color: #2e7d32; }
-        .type-refrigerator { background: #e3f2fd; color: #1565c0; }
-        .type-dishwasher { background: #f3e5f5; color: #7b1fa2; }
-        .type-washing_machine { background: #e0f7fa; color: #00838f; }
-        .type-dryer { background: #fff3e0; color: #ef6c00; }
-        .type-other { background: #f5f5f5; color: #616161; }
-        .type-media_player { background: #f3e8fd; color: #7627bb; }
-        .type-sensor { background: #f1f3f4; color: #5f6368; }
-        .domain-tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-        .domain-tab { padding: 8px 16px; border: 1px solid #ddd; border-radius: 20px; cursor: pointer; background: white; font-size: 13px; }
-        .domain-tab.active { background: #1a73e8; color: white; border-color: #1a73e8; }
-        .entity-list { max-height: 400px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; }
-        .entity-item { display: flex; align-items: center; padding: 10px 12px; border-bottom: 1px solid #f0f0f0; cursor: pointer; }
-        .entity-item:hover { background: #f8f9fa; }
-        .entity-item.selected { background: #e8f0fe; }
-        .entity-info { flex: 1; }
-        .entity-name { font-weight: 500; font-size: 14px; }
-        .entity-id { font-size: 12px; color: #666; font-family: monospace; }
-        .entity-state { font-size: 12px; color: #34a853; }
-        .bindings-section { margin-top: 24px; }
-        .binding-item { background: #f8f9fa; border-radius: 6px; padding: 16px; margin-bottom: 12px; }
-        .binding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .binding-name { font-weight: 500; font-size: 16px; display: flex; align-items: center; gap: 8px; }
-        .binding-entity { font-family: monospace; font-size: 12px; color: #666; margin-bottom: 8px; }
-        .keywords-tags { display: flex; gap: 8px; flex-wrap: wrap; }
-        .keyword-tag { background: #e8f0fe; color: #1967d2; padding: 4px 12px; border-radius: 16px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
-        .keyword-tag .remove { cursor: pointer; font-weight: bold; }
-        .add-keyword { display: flex; gap: 8px; margin-top: 8px; }
-        .add-keyword input { flex: 1; padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
-        .empty-state { text-align: center; padding: 48px; color: #666; }
-        .empty-state p { margin-bottom: 16px; }
-        .loading { text-align: center; padding: 24px; color: #666; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+        
+        .header { background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-card) 100%); padding: 16px 24px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 20px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .header .version { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+        .header .status { font-size: 13px; color: var(--accent-green); padding: 4px 12px; background: rgba(16, 185, 129, 0.15); border-radius: 16px; }
+
+        .tabs { display: flex; gap: 4px; padding: 12px 24px; background: var(--bg-secondary); border-bottom: 1px solid var(--border-color); overflow-x: auto; }
+        .tab { padding: 10px 24px; border: none; background: transparent; color: var(--text-secondary); font-size: 14px; font-weight: 500; border-radius: var(--radius); cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+        .tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .tab.active { background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%); color: white; box-shadow: var(--shadow); }
+
+        .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+        .tab-content { animation: fadeIn 0.3s ease; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
         .hidden { display: none !important; }
-        .speaker-list { margin-bottom: 12px; }
-        .speaker-item { display: flex; align-items: center; padding: 10px; border: 1px solid #ddd; border-radius: 4px; margin-bottom: 8px; gap: 10px; }
-        .speaker-item.selected { background: #e8f0fe; border-color: #1a73e8; }
+
+        .card { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; border: 1px solid var(--border-color); transition: all 0.3s ease; }
+        .card:hover { border-color: var(--border-color-light); }
+        .card-title { font-size: 18px; font-weight: 600; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-weight: 500; margin-bottom: 8px; font-size: 14px; color: var(--text-secondary); }
+        .form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 14px; background: var(--bg-secondary); color: var(--text-primary); transition: all 0.3s ease; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+        .form-group input::placeholder { color: var(--text-muted); }
+
+        .btn { padding: 12px 24px; border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 8px; }
+        .btn-primary { background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-hover) 100%); color: white; }
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+        .btn-success { background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-hover) 100%); color: white; }
+        .btn-success:hover { transform: translateY(-1px); box-shadow: var(--shadow); }
+        .btn-danger { background: var(--accent-red); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-secondary { background: var(--bg-card-hover); color: var(--text-primary); border: 1px solid var(--border-color); }
+        .btn-secondary:hover { border-color: var(--border-color-light); }
+        .btn-small { padding: 6px 14px; font-size: 13px; }
+
+        .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+
+        .alert { padding: 14px 16px; border-radius: var(--radius); margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .alert.success { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .alert.error { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .alert.info { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .alert.warning { background: rgba(245, 158, 11, 0.15); color: var(--accent-yellow); border: 1px solid rgba(245, 158, 11, 0.3); }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-secondary) 100%); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border-color); display: flex; align-items: center; gap: 16px; }
+        .stat-icon { width: 48px; height: 48px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+        .stat-icon.blue { background: rgba(59, 130, 246, 0.15); }
+        .stat-icon.green { background: rgba(16, 185, 129, 0.15); }
+        .stat-icon.yellow { background: rgba(245, 158, 11, 0.15); }
+        .stat-icon.purple { background: rgba(139, 92, 246, 0.15); }
+        .stat-info { flex: 1; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); }
+        .stat-label { font-size: 13px; color: var(--text-muted); }
+
+        .entity-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .entity-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border-color); cursor: pointer; transition: all 0.3s ease; }
+        .entity-card:hover { border-color: var(--accent-blue); background: var(--bg-card-hover); transform: translateY(-2px); }
+        .entity-card.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        .entity-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .entity-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .entity-type { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 500; }
+        .type-climate { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .type-vacuum { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .type-light { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+        .type-switch { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .type-fan { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+        .type-refrigerator { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); }
+        .type-dishwasher { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .type-washing_machine { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .type-dryer { background: rgba(245, 158, 11, 0.2); color: var(--accent-yellow); }
+        .type-stove { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); }
+        .type-range_hood { background: rgba(107, 114, 128, 0.2); color: var(--text-secondary); }
+        .type-water_heater { background: rgba(234, 88, 12, 0.2); color: #ea580c; }
+        .type-air_purifier { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); }
+        .type-humidifier { background: rgba(59, 130, 246, 0.2); color: var(--accent-blue); }
+        .type-cover { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); }
+        .entity-id { font-family: 'Monaco', 'Consolas', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 8px; }
+        .entity-state { font-size: 13px; color: var(--accent-green); }
+        .entity-state.off { color: var(--text-muted); }
+
+        .keyword-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+        .keyword-tag { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); padding: 4px 10px; border-radius: 16px; font-size: 12px; display: flex; align-items: center; gap: 4px; }
+        .keyword-tag .remove { cursor: pointer; font-size: 14px; line-height: 1; }
+
+        .binding-section { margin-top: 24px; }
+        .binding-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border-color); margin-bottom: 16px; }
+        .binding-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .binding-name { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+        .binding-actions { display: flex; gap: 8px; }
+        .binding-entity { font-family: 'Monaco', 'Consolas', monospace; font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+
+        .add-keyword-row { display: flex; gap: 8px; margin-top: 12px; }
+        .add-keyword-row input { flex: 1; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); }
+        .add-keyword-row input:focus { outline: none; border-color: var(--accent-blue); }
+
+        .rooms-section { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color); }
+        .rooms-title { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .room-item { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+        .room-item input { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); }
+        .room-name-input { width: 140px; }
+        .room-id-input { width: 100px; }
+        .room-select { padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 13px; background: var(--bg-secondary); color: var(--text-primary); }
+
+        .speaker-card { background: var(--bg-card); border-radius: var(--radius); padding: 16px; border: 1px solid var(--border-color); margin-bottom: 12px; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; gap: 14px; }
+        .speaker-card:hover { border-color: var(--border-color-light); }
+        .speaker-card.selected { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        .speaker-checkbox { width: 20px; height: 20px; cursor: pointer; accent-color: var(--accent-blue); }
         .speaker-info { flex: 1; }
-        .speaker-name { font-weight: 500; }
-        .speaker-id { font-size: 12px; color: #666; font-family: monospace; }
-        .checkbox { width: 18px; height: 18px; cursor: pointer; }
-        .hint { font-size: 12px; color: #666; margin-top: 4px; }
-        .type-select { padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-size: 12px; }
-        .rooms-section { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; }
-        .rooms-section h4 { font-size: 13px; color: #666; margin-bottom: 8px; }
-        .room-item { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
-        .room-item input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-        .room-item .room-name { width: 100px; }
-        .room-item .room-id { width: 80px; }
-        .add-room { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
-        .add-room input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
-        .command-card { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
-        .command-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-        .command-name { font-weight: 500; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-        .command-type { font-size: 12px; padding: 2px 8px; border-radius: 12px; }
-        .command-keywords { display: flex; flex-wrap: wrap; gap: 8px; }
-        .command-keyword { background: #e8f0fe; color: #1967d2; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
-        .command-keyword:hover { background: #1967d2; color: white; transform: scale(1.05); }
-        .command-rooms { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0; }
-        .command-room-item { font-size: 12px; color: #666; margin-bottom: 4px; }
-        .conversation-tag { background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-        .media-player-tag { background: #fce8e6; color: #c5221f; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
-        .xiaomi-badge { background: #fef7e0; color: #b06000; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .speaker-name { font-size: 15px; font-weight: 500; color: var(--text-primary); }
+        .speaker-id { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+
+        .notify-services-list { max-height: 200px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 12px; background: var(--bg-secondary); }
+        .notify-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; transition: background 0.2s; }
+        .notify-item:hover { background: var(--bg-card); }
+        .notify-checkbox { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent-blue); }
+        .notify-name { font-size: 14px; color: var(--text-primary); }
+
+        .test-input-wrapper { display: flex; gap: 10px; margin-bottom: 16px; }
+        .test-input-wrapper input { flex: 1; padding: 14px 16px; border: 1px solid var(--border-color); border-radius: var(--radius); font-size: 15px; background: var(--bg-secondary); color: var(--text-primary); }
+        .test-input-wrapper input:focus { outline: none; border-color: var(--accent-blue); }
+
+        .test-result { padding: 16px; border-radius: var(--radius); background: var(--bg-secondary); border: 1px solid var(--border-color); }
+
+        .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-state p { font-size: 14px; margin-bottom: 8px; }
+
+        .loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); }
+        .spinner { width: 24px; height: 24px; border: 2px solid var(--border-color); border-top-color: var(--accent-blue); border-radius: 50%; animation: spin 1s linear infinite; margin-right: 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .hint { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+        .section-desc { font-size: 14px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.6; }
+
+        .usage-section { background: var(--bg-card); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 24px; border-left: 4px solid var(--accent-purple); }
+        .usage-section h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-primary); }
+        .usage-section ul { list-style: none; padding-left: 0; }
+        .usage-section li { padding: 8px 0; font-size: 14px; color: var(--text-secondary); display: flex; align-items: flex-start; gap: 8px; }
+        .usage-section li::before { content: '•'; color: var(--accent-purple); font-weight: bold; }
+
+        .command-suggestions { margin-top: 12px; }
+        .command-suggestions h4 { font-size: 13px; font-weight: 600; color: var(--accent-green); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+        .command-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+        .command-tag { background: rgba(16, 185, 129, 0.1); color: var(--accent-green); padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+        .command-tag:hover { background: rgba(16, 185, 129, 0.2); transform: translateY(-1px); }
+
+        .device-summary-card { background: var(--bg-card); border-radius: var(--radius); padding: 20px; border: 1px solid var(--border-color); margin-bottom: 16px; transition: all 0.3s; }
+        .device-summary-card:hover { border-color: var(--border-color-light); }
+        .device-summary-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .device-summary-name { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .device-summary-type { font-size: 11px; padding: 4px 10px; border-radius: 12px; font-weight: 500; }
+
+        @media (max-width: 768px) {
+            .form-row { grid-template-columns: 1fr; }
+            .tabs { overflow-x: auto; }
+            .tab { flex-shrink: 0; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .entity-cards { grid-template-columns: 1fr; }
+            .btn-group { flex-direction: column; }
+            .btn { width: 100%; justify-content: center; }
+            .header { flex-direction: column; gap: 10px; align-items: flex-start; }
+        }
     </style>
 </head>
 <body>
     <div class="header">
-        <h1>🎙️ XiaoAI HA Bridge - 小爱音箱智能家居桥接 v0.2.3</h1>
+        <h1>🎙️ XiaoAI HA Bridge <span class="version">v0.2.4</span></h1>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span class="status">✓ 服务运行中</span>
+            <button class="btn btn-secondary btn-small" onclick="loadConfig()">🔄 刷新</button>
+        </div>
     </div>
+
+    <div class="tabs">
+        <button class="tab active" onclick="switchTab('dashboard')">📊 仪表盘</button>
+        <button class="tab" onclick="switchTab('devices')">📱 设备管理</button>
+        <button class="tab" onclick="switchTab('config')">⚙️ 连接配置</button>
+        <button class="tab" onclick="switchTab('test')">🧪 指令测试</button>
+    </div>
+
     <div class="container">
         <div id="alert-area"></div>
 
-        <div class="card">
-            <h2>📡 Home Assistant 连接配置</h2>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Home Assistant URL</label>
-                    <input type="text" id="ha-url" placeholder="http://your-ha-ip:8123">
-                </div>
-                <div class="form-group">
-                    <label>API Token (Long-lived access token)</label>
-                    <input type="password" id="ha-token" placeholder="输入HA访问令牌">
-                </div>
-            </div>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="testConnection()">🔌 测试连接</button>
-                <button class="btn btn-secondary" onclick="discoverEntities()">🔍 发现设备</button>
-                <button class="btn btn-success" onclick="saveConfig()">💾 保存全部配置</button>
-                <button class="btn btn-danger" onclick="restartService()">🔄 重启服务</button>
-            </div>
-        </div>
-
-        <div class="card" id="speaker-card" style="display: none;">
-            <h2>🔊 小爱音箱配置（支持多个）</h2>
-            <p style="color: #666; margin-bottom: 12px; font-size: 13px;">勾选需要监听的小爱音箱，任意一个音箱收到指令都可以控制设备，回复也会从听到指令的音箱播报。</p>
-            <p style="color: #1a73e8; margin-bottom: 12px; font-size: 13px; font-weight: 500;">💡 提示：请优先选择类型为"conversation"的实体（如 sensor.xiaomi_lx06_xxx_conversation），这类实体包含完整的语音对话记录。</p>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-                <button class="btn btn-secondary" onclick="discoverSpeakersFromHA()" style="padding: 6px 14px; font-size: 13px;">🔍 刷新音箱列表</button>
-                <span style="font-size: 12px; color: #666; align-self: center;">从HA自动发现所有小爱音箱相关实体</span>
-            </div>
-            <div class="speaker-list" id="speaker-list">
-                <div class="loading">正在加载音箱列表...</div>
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label>执行文本指令服务</label>
-                    <input type="text" id="execute-service" value="xiaomi_miot_raw.execute_text">
-                </div>
-                <div class="form-group">
-                    <label>TTS播报服务</label>
-                    <input type="text" id="play-service" value="xiaomi_miot_raw.play_text">
-                </div>
-            </div>
-        </div>
-
-        <div class="card" id="notify-card" style="display: none;">
-            <h2>📱 手机通知配置（支持多选）</h2>
-            <p style="color: #666; margin-bottom: 12px; font-size: 13px;">设备操作完成后会发送手机通知，可以勾选多个设备同时推送，需要先安装HA手机APP并登录。通知格式例如："已经打开小孩空调，模式制冷温度26度"</p>
-            <div class="form-group">
-                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-                    <label style="margin: 0;">通知设备</label>
-                    <button class="btn btn-secondary" onclick="discoverNotifyServices()" style="padding: 4px 12px; font-size: 13px;">🔍 刷新列表</button>
-                    <button class="btn btn-secondary" onclick="selectAllNotify()" style="padding: 4px 12px; font-size: 13px;">全选</button>
-                    <button class="btn btn-secondary" onclick="deselectAllNotify()" style="padding: 4px 12px; font-size: 13px;">清空</button>
-                </div>
-                <div id="notify-services-list" style="max-height: 200px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px; padding: 8px; background: #fafafa;">
-                    <div style="color: #999; font-size: 13px;">点击「🔍刷新列表」获取手机通知服务</div>
-                </div>
-            </div>
-            <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                <input type="checkbox" id="notify-clean-complete" checked style="width: auto;">
-                <label for="notify-clean-complete" style="margin: 0;">清扫完成后发送通知（同时也会通过小爱音箱TTS播报）</label>
-            </div>
-            <div class="form-group" style="margin-top: 16px;">
-                <label>测试消息（可选，自定义测试内容）</label>
-                <div style="display: flex; gap: 8px;">
-                    <input type="text" id="notify-test-message" placeholder="例如：已经打开小孩空调，模式制冷温度26度" style="flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
-                    <button class="btn btn-primary" onclick="testNotification()">📱 发送测试通知</button>
-                </div>
-                <p class="hint">点击按钮会向所有选中的设备发送测试消息。</p>
-            </div>
-        </div>
-
-        <div class="card" id="entities-card" style="display: none;">
-            <h2>📱 设备绑定配置</h2>
-            <p style="color: #666; margin-bottom: 16px; font-size: 13px;">选择设备实体添加绑定，给每个设备设置语音触发关键词/别名即可。支持空调、扫地机器人、灯、开关、风扇等。</p>
-            
-            <div class="domain-tabs" id="domain-tabs">
+        <div id="tab-dashboard" class="tab-content">
+            <div class="usage-section">
+                <h3>💡 使用说明</h3>
+                <ul>
+                    <li>本服务用于<strong>小爱音箱控制非米家设备</strong>（如格力/美的空调、追觅扫地机、冰箱等）</li>
+                    <li>米家原生设备（灯光、窗帘、浴霸、晾衣架）小爱可直接控制，<strong>无需通过本桥接服务</strong></li>
+                    <li>点击建议指令可快速填入测试框</li>
+                    <li>语音指令支持自然语言，如「打开主卧空调」「小孩房空调多少度」「追觅去打扫客厅」</li>
+                </ul>
             </div>
 
-            <div id="entity-search" style="margin-bottom: 12px;">
-                <input type="text" id="search-input" placeholder="搜索设备名称..." oninput="filterEntities()" style="width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
-            </div>
-
-            <div class="entity-list" id="entity-list">
-                <div class="loading">正在加载设备列表...</div>
-            </div>
-
-            <div class="bindings-section">
-                <h3 style="margin-bottom: 12px; font-size: 16px;">📋 已绑定设备</h3>
-                <div id="bindings-list">
-                    <div class="empty-state">
-                        <p>还没有绑定设备，点击上方设备添加绑定</p>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon blue">🔌</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-ha-status">❌</div>
+                        <div class="stat-label">HA 连接状态</div>
                     </div>
                 </div>
-                <button class="btn btn-primary" onclick="saveConfig()" style="margin-top: 12px;">💾 保存全部配置</button>
+                <div class="stat-card">
+                    <div class="stat-icon green">🎙️</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-speakers">0</div>
+                        <div class="stat-label">小爱音箱数量</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon yellow">📱</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-devices">0</div>
+                        <div class="stat-label">已绑定设备</div>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon purple">🔑</div>
+                    <div class="stat-info">
+                        <div class="stat-value" id="stat-keywords">0</div>
+                        <div class="stat-label">语音关键词</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">📱 可控设备</div>
+                <div id="dashboard-bindings">
+                    <div class="empty-state">
+                        <div class="icon">📱</div>
+                        <p>还没有绑定设备</p>
+                        <p style="font-size: 13px;">前往「设备管理」添加设备绑定</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card" id="commands-card" style="display: none;">
-            <h2>🗣️ 支持的语音指令列表</h2>
-            <p style="color: #666; margin-bottom: 16px; font-size: 13px;">以下是当前配置支持的所有语音指令，按设备类型分组。点击关键词可以复制。</p>
-            
-            <div class="domain-tabs" id="command-domain-tabs" style="margin-bottom: 16px;">
+        <div id="tab-devices" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">🔍 发现设备实体</div>
+                <div class="section-desc">点击「一键发现」自动扫描 Home Assistant 中的设备，点击设备卡片即可添加绑定，关键词会自动根据设备名称生成。</div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="discoverAndBindAll()">✨ 一键发现并绑定所有设备</button>
+                    <button class="btn btn-secondary" onclick="discoverEntities()">🔍 仅发现设备</button>
+                </div>
             </div>
 
-            <div id="commands-list">
-                <div class="loading">正在加载指令列表...</div>
+            <div class="card">
+                <div class="card-title">📦 设备列表</div>
+                <div style="margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <input type="text" id="device-search" placeholder="搜索设备名称或实体ID..." oninput="filterDevices()" style="flex: 1; min-width: 200px; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-primary);">
+                    <select id="device-filter" onchange="filterDevices()" style="padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-primary);">
+                        <option value="all">全部类型</option>
+                        <option value="climate">❄️ 空调</option>
+                        <option value="vacuum">🤖 扫地机器人</option>
+                        <option value="light">💡 灯</option>
+                        <option value="switch">🔌 开关</option>
+                        <option value="fan">🌀 风扇</option>
+                        <option value="refrigerator">🧊 冰箱</option>
+                        <option value="dishwasher">🍽️ 洗碗机</option>
+                        <option value="washing_machine">👕 洗衣机</option>
+                        <option value="dryer">🔥 烘干机</option>
+                        <option value="stove">🔥 灶台</option>
+                        <option value="range_hood">🍳 油烟机</option>
+                        <option value="water_heater">🚿 热水器</option>
+                        <option value="air_purifier">🌬️ 净化器</option>
+                        <option value="humidifier">💧 加湿器</option>
+                        <option value="cover">🪟 窗帘</option>
+                    </select>
+                </div>
+                <div id="devices-list" class="entity-cards">
+                    <div class="loading"><div class="spinner"></div>加载中...</div>
+                </div>
+            </div>
+
+            <div class="card binding-section">
+                <div class="card-title">📋 已绑定设备配置</div>
+                <div id="bindings-list">
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>还没有绑定设备</p>
+                        <p style="font-size: 13px;">点击上方设备卡片添加绑定</p>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="card" id="test-card" style="display: none;">
-            <h2>🧪 指令测试</h2>
-            <div class="form-group">
-                <label>输入语音指令测试</label>
-                <input type="text" id="test-text" placeholder="例如: 打开主卧空调、打扫餐厅、洗碗机状态、冰箱多少度、洗衣机还要多久" onkeypress="if(event.key==='Enter')testCommand()">
+        <div id="tab-config" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">📡 Home Assistant 连接配置</div>
+                <div class="section-desc">配置 Home Assistant 的访问地址和长期访问令牌。令牌在 HA 的「个人资料 → 长期访问令牌」中创建。</div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Home Assistant URL</label>
+                        <input type="text" id="ha-url" placeholder="http://your-ha-ip:8123">
+                        <p class="hint">含协议和端口，如 https://ha.example.com:8123</p>
+                    </div>
+                    <div class="form-group">
+                        <label>API Token (Long-lived access token)</label>
+                        <input type="password" id="ha-token" placeholder="输入HA访问令牌">
+                        <p class="hint">在 HA 个人资料页面底部创建</p>
+                    </div>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="testConnection()">🔌 测试连接</button>
+                    <button class="btn btn-success" onclick="saveConfig()">💾 保存配置</button>
+                    <button class="btn btn-danger" onclick="restartService()">🔄 重启服务</button>
+                </div>
             </div>
-            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
-                <button class="btn btn-primary" onclick="executeCommand()">🚀 执行指令</button>
-                <span style="font-size: 12px; color: #666; align-self: center;">提示：「测试解析」只验证匹配，「执行指令」会真正控制设备+TTS播报+手机通知</span>
+
+            <div class="card" id="speaker-config-card" style="display: none;">
+                <div class="card-title">🔊 小爱音箱配置</div>
+                <div class="section-desc">配置要通过此桥接服务监听的小爱音箱。<strong>仅支持 xiaomi_miot 集成</strong> 创建的音箱，Xiaomi Home 集成音箱无法捕获语音指令。</div>
+                <div id="speaker-list">
+                    <div class="loading"><div class="spinner"></div>加载中...</div>
+                </div>
+                <div class="form-row" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>执行文本指令服务</label>
+                        <input type="text" id="execute-service" value="xiaomi_miot_raw.execute_text">
+                    </div>
+                    <div class="form-group">
+                        <label>TTS播报服务</label>
+                        <input type="text" id="play-service" value="xiaomi_miot_raw.play_text">
+                    </div>
+                </div>
             </div>
-            <div id="test-result" style="margin-top: 12px;"></div>
+
+            <div class="card" id="notify-config-card" style="display: none;">
+                <div class="card-title">📱 手机通知配置</div>
+                <div class="section-desc">设备操作完成后会发送手机通知，可以勾选多个设备同时推送，需要先安装HA手机APP并登录。</div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <span style="color: var(--text-secondary); font-size: 14px;">通知设备：</span>
+                    <button class="btn btn-secondary btn-small" onclick="discoverNotifyServices()">🔍 刷新列表</button>
+                    <button class="btn btn-secondary btn-small" onclick="selectAllNotify()">全选</button>
+                    <button class="btn btn-secondary btn-small" onclick="deselectAllNotify()">清空</button>
+                </div>
+                <div id="notify-services-list" class="notify-services-list">
+                    <div style="color: var(--text-muted); text-align: center; padding: 20px;">点击「刷新列表」获取手机通知服务</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px; margin-top: 16px;">
+                    <input type="checkbox" id="notify-clean-complete" checked style="width: 18px; height: 18px; accent-color: var(--accent-blue);">
+                    <label for="notify-clean-complete" style="color: var(--text-secondary);">清扫完成后发送通知（同时也会通过小爱音箱TTS播报）</label>
+                </div>
+                <div style="margin-top: 16px;">
+                    <label style="display: block; margin-bottom: 8px; color: var(--text-secondary);">测试消息</label>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="notify-test-message" placeholder="例如：已经打开小孩空调，模式制冷温度26度" style="flex: 1; padding: 10px 14px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-primary);">
+                        <button class="btn btn-primary" onclick="testNotification()">📱 发送测试通知</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-test" class="tab-content hidden">
+            <div class="card">
+                <div class="card-title">🧪 指令测试</div>
+                <div class="section-desc">输入语音指令测试解析和执行效果，支持空调控制、扫地机器人、灯光开关等。</div>
+                <div class="test-input-wrapper">
+                    <input type="text" id="test-text" placeholder="例如: 打开主卧空调、打扫餐厅、洗碗机状态" onkeypress="if(event.key==='Enter')testCommand()">
+                    <button class="btn btn-secondary" onclick="testCommand()">▶️ 测试解析</button>
+                    <button class="btn btn-primary" onclick="executeCommand()">🚀 执行指令</button>
+                </div>
+                <p class="hint">「测试解析」只验证匹配，「执行指令」会真正控制设备+TTS播报+手机通知</p>
+                <div id="test-result"></div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">💡 快速测试指令</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('打开主卧空调')">打开主卧空调</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('关闭空调')">关闭空调</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('空调调到26度')">空调调到26度</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('打扫客厅')">打扫客厅</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('扫地机器人回充')">扫地机器人回充</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('打开客厅灯')">打开客厅灯</button>
+                    <button class="btn btn-secondary btn-small" onclick="fillTestCommand('关闭卧室灯')">关闭卧室灯</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         let config = null;
         let entities = {};
-        let currentDomain = 'climate';
         let bindings = {};
         let selectedSpeakers = [];
-        let speakerEntities = [];
-        let commandsList = {};
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.add('hidden'));
+            document.querySelector(`button[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+
+            if (tabName === 'dashboard') {
+                updateDashboard();
+            } else if (tabName === 'devices') {
+                if (Object.keys(entities).length > 0) {
+                    renderDevicesList();
+                }
+                renderBindings();
+            } else if (tabName === 'config') {
+                if (config && config.home_assistant?.url) {
+                    document.getElementById('speaker-config-card').style.display = 'block';
+                    document.getElementById('notify-config-card').style.display = 'block';
+                    renderSpeakerList();
+                }
+            }
+        }
 
         function showAlert(message, type = 'success') {
             const area = document.getElementById('alert-area');
@@ -256,20 +459,37 @@
         }
 
         function getDeviceType(entityId) {
+            const id = entityId.toLowerCase();
             if (entityId.startsWith('climate.')) return 'climate';
             if (entityId.startsWith('vacuum.')) return 'vacuum';
             if (entityId.startsWith('light.')) return 'light';
             if (entityId.startsWith('fan.')) return 'fan';
-            if (entityId.startsWith('media_player.')) return 'media_player';
-            if (entityId.startsWith('sensor.')) return 'sensor';
-            if (entityId.startsWith('switch.')) return 'switch';
+            if (entityId.startsWith('cover.')) return 'cover';
+            if (entityId.startsWith('humidifier.')) return 'humidifier';
+            if (entityId.startsWith('switch.')) {
+                if (id.includes('refrigerator') || id.includes('fridge') || id.includes('冰箱')) return 'refrigerator';
+                if (id.includes('dishwasher') || id.includes('洗碗机')) return 'dishwasher';
+                if (id.includes('washing') || id.includes('washer') || id.includes('洗衣机')) return 'washing_machine';
+                if (id.includes('dryer') || id.includes('烘干机') || id.includes('干衣机')) return 'dryer';
+                if (id.includes('stove') || id.includes('gas') || id.includes('灶台') || id.includes('燃气灶')) return 'stove';
+                if (id.includes('range_hood') || id.includes('hood') || id.includes('油烟机')) return 'range_hood';
+                if (id.includes('water_heater') || id.includes('热水器')) return 'water_heater';
+                if (id.includes('air_purifier') || id.includes('purifier') || id.includes('净化器')) return 'air_purifier';
+                return 'switch';
+            }
+            if (entityId.startsWith('sensor.')) {
+                if (id.includes('refrigerator') || id.includes('fridge') || id.includes('冰箱')) return 'refrigerator';
+                if (id.includes('dishwasher') || id.includes('洗碗机')) return 'dishwasher';
+                if (id.includes('washing') || id.includes('washer') || id.includes('洗衣机')) return 'washing_machine';
+                if (id.includes('dryer') || id.includes('烘干机')) return 'dryer';
+            }
             return 'other';
         }
 
         function getTypeLabel(type) {
             const labels = {
                 climate: '空调',
-                vacuum: '扫地机器人',
+                vacuum: '扫地机',
                 light: '灯',
                 switch: '开关',
                 fan: '风扇',
@@ -277,11 +497,124 @@
                 dishwasher: '洗碗机',
                 washing_machine: '洗衣机',
                 dryer: '烘干机',
-                media_player: '媒体',
-                sensor: '传感器',
+                stove: '灶台',
+                range_hood: '油烟机',
+                water_heater: '热水器',
+                air_purifier: '净化器',
+                humidifier: '加湿器',
+                cover: '窗帘',
                 other: '其他'
             };
             return labels[type] || type;
+        }
+
+        function generateKeywords(name) {
+            const keywords = [name];
+            const roomNames = ['客厅', '卧室', '主卧', '次卧', '书房', '厨房', '餐厅', '卫生间', '阳台', '走廊'];
+            for (const room of roomNames) {
+                if (name.includes(room)) {
+                    keywords.push(name.replace(room, '').trim());
+                    break;
+                }
+            }
+            return keywords.filter(k => k);
+        }
+
+        function generateCommandSuggestions(name, type) {
+            const suggestions = [];
+            if (type === 'climate') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}多少度`);
+                suggestions.push(`${name}制冷26度`);
+                suggestions.push(`${name}制热模式`);
+                suggestions.push(`${name}调到24度`);
+                suggestions.push(`${name}调高一度`);
+                suggestions.push(`${name}调低一度`);
+            } else if (type === 'vacuum') {
+                suggestions.push('扫拖客厅');
+                suggestions.push('仅拖厨房');
+                suggestions.push('打扫主卧');
+                suggestions.push('扫一次拖一次');
+                suggestions.push('仅扫地');
+                suggestions.push('仅拖地');
+                suggestions.push('自清洁');
+                suggestions.push('回去充电');
+                suggestions.push('状态');
+                suggestions.push('暂停');
+                suggestions.push('继续');
+            } else if (type === 'light') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}调亮`);
+                suggestions.push(`${name}调暗`);
+                suggestions.push(`${name}亮度50%`);
+            } else if (type === 'switch') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+            } else if (type === 'fan') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}风速`);
+                suggestions.push(`${name}调高风速`);
+            } else if (type === 'refrigerator') {
+                suggestions.push(`${name}温度`);
+                suggestions.push(`${name}模式`);
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}开门`);
+                suggestions.push(`${name}关门`);
+            } else if (type === 'dishwasher') {
+                suggestions.push(`${name}开始`);
+                suggestions.push(`${name}暂停`);
+                suggestions.push(`${name}状态`);
+                suggestions.push(`${name}结束`);
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+            } else if (type === 'washing_machine') {
+                suggestions.push(`${name}开始`);
+                suggestions.push(`${name}暂停`);
+                suggestions.push(`${name}状态`);
+                suggestions.push(`${name}结束`);
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+            } else if (type === 'dryer') {
+                suggestions.push(`${name}开始`);
+                suggestions.push(`${name}暂停`);
+                suggestions.push(`${name}状态`);
+            } else if (type === 'stove') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}点火`);
+                suggestions.push(`${name}关火`);
+            } else if (type === 'range_hood') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}风速`);
+                suggestions.push(`${name}调高风速`);
+            } else if (type === 'water_heater') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}温度`);
+                suggestions.push(`${name}加热`);
+            } else if (type === 'air_purifier') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}模式`);
+                suggestions.push(`${name}风速`);
+            } else if (type === 'humidifier') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}湿度`);
+                suggestions.push(`${name}模式`);
+            } else if (type === 'cover') {
+                suggestions.push(`打开${name}`);
+                suggestions.push(`关闭${name}`);
+                suggestions.push(`${name}升高`);
+                suggestions.push(`${name}降低`);
+                suggestions.push(`${name}半开`);
+            }
+            return suggestions;
         }
 
         async function loadConfig() {
@@ -289,9 +622,9 @@
                 const resp = await fetch('/api/config');
                 if (resp.ok) {
                     config = await resp.json();
-                    document.getElementById('ha-url').value = config.home_assistant.url || '';
-                    document.getElementById('ha-token').value = config.home_assistant.api_token || '';
-                    document.getElementById('execute-service').value = config.xiaomi_speakers && config.xiaomi_speakers.length > 0 
+                    document.getElementById('ha-url').value = config.home_assistant?.url || '';
+                    document.getElementById('ha-token').value = config.home_assistant?.api_token || '';
+                    document.getElementById('execute-service').value = config.xiaomi_speakers && config.xiaomi_speakers.length > 0
                         ? config.xiaomi_speakers[0].execute_text_service || 'xiaomi_miot_raw.execute_text'
                         : 'xiaomi_miot_raw.execute_text';
                     document.getElementById('play-service').value = config.xiaomi_speakers && config.xiaomi_speakers.length > 0
@@ -304,27 +637,77 @@
                     }
                     window._savedNotifyServices = savedNotifyServices;
                     document.getElementById('notify-clean-complete').checked = config.tts?.notify_on_clean_complete !== false;
-                    
+
                     selectedSpeakers = (config.xiaomi_speakers || []).map(sp => sp.entity_id);
                     bindings = config.commands || {};
-                    
-                    if (config.home_assistant.url && config.home_assistant.api_token) {
+
+                    if (config.home_assistant?.url && config.home_assistant?.api_token) {
                         await discoverEntities();
                         await discoverNotifyServices();
-                        await loadCommandsList();
-                        document.getElementById('notify-card').style.display = 'block';
-                        document.getElementById('commands-card').style.display = 'block';
+                        document.getElementById('speaker-config-card').style.display = 'block';
+                        document.getElementById('notify-config-card').style.display = 'block';
                     }
+
+                    updateDashboard();
+                    renderBindings();
                 }
             } catch (e) {
                 console.log('配置加载失败（可能是首次运行）');
             }
         }
 
+        function updateDashboard() {
+            const haUrl = config?.home_assistant?.url || '';
+            document.getElementById('stat-ha-status').textContent = haUrl ? '✅ 已配置' : '❌ 未配置';
+            document.getElementById('stat-speakers').textContent = selectedSpeakers.length;
+            document.getElementById('stat-devices').textContent = Object.keys(bindings).length;
+            
+            let keywordCount = 0;
+            for (const b of Object.values(bindings)) {
+                keywordCount += (b.keywords || []).length;
+            }
+            document.getElementById('stat-keywords').textContent = keywordCount;
+
+            const dashboardBindings = document.getElementById('dashboard-bindings');
+            const bindingKeys = Object.keys(bindings);
+            if (bindingKeys.length === 0) {
+                dashboardBindings.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📱</div>
+                        <p>还没有绑定设备</p>
+                        <p style="font-size: 13px;">前往「设备管理」添加设备绑定</p>
+                    </div>
+                `;
+            } else {
+                let html = '';
+                for (const [key, binding] of Object.entries(bindings)) {
+                    const type = binding.device_type || getDeviceType(binding.entity_id);
+                    const typeLabel = getTypeLabel(type);
+                    const suggestions = generateCommandSuggestions(binding.name, type);
+                    const suggestionsHtml = suggestions.map(s => `<span class="command-tag" onclick="fillTestCommand('${s}')">${s}</span>`).join('');
+                    
+                    html += `
+                        <div class="device-summary-card">
+                            <div class="device-summary-header">
+                                <span class="device-summary-name">${binding.name}</span>
+                                <span class="device-summary-type type-${type}">${typeLabel}</span>
+                            </div>
+                            <div class="entity-id">${binding.entity_id}</div>
+                            <div class="command-suggestions">
+                                <h4>💬 语音指令建议：</h4>
+                                <div class="command-tags">${suggestionsHtml}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                dashboardBindings.innerHTML = html;
+            }
+        }
+
         async function testConnection() {
             const url = document.getElementById('ha-url').value;
             const token = document.getElementById('ha-token').value;
-            
+
             if (!url || !token) {
                 showAlert('请填写 URL 和 Token', 'error');
                 return;
@@ -340,16 +723,11 @@
                 if (result.success) {
                     showAlert('✅ 连接成功！已发现设备', 'success');
                     entities = result.entities;
-                    renderDomainTabs();
-                    renderEntities();
-                    await discoverSpeakersFromHA();
+                    renderSpeakerList();
                     await discoverNotifyServices();
-                    await loadCommandsList();
-                    document.getElementById('entities-card').style.display = 'block';
-                    document.getElementById('speaker-card').style.display = 'block';
-                    document.getElementById('notify-card').style.display = 'block';
-                    document.getElementById('commands-card').style.display = 'block';
-                    document.getElementById('test-card').style.display = 'block';
+                    document.getElementById('speaker-config-card').style.display = 'block';
+                    document.getElementById('notify-config-card').style.display = 'block';
+                    updateDashboard();
                 } else {
                     showAlert('❌ 连接失败: ' + (result.error || '未知错误'), 'error');
                 }
@@ -361,7 +739,7 @@
         async function discoverEntities() {
             const url = document.getElementById('ha-url').value;
             const token = document.getElementById('ha-token').value;
-            
+
             try {
                 let entitiesData;
                 if (url && token) {
@@ -375,24 +753,18 @@
                         entitiesData = result.entities;
                     }
                 }
-                
+
                 if (!entitiesData) {
                     const resp = await fetch('/api/discover');
                     if (resp.ok) {
                         entitiesData = await resp.json();
                     }
                 }
-                
+
                 if (entitiesData) {
                     entities = entitiesData;
-                    renderDomainTabs();
-                    renderEntities();
-                    await discoverSpeakersFromHA();
-                    await loadCommandsList();
-                    document.getElementById('entities-card').style.display = 'block';
-                    document.getElementById('speaker-card').style.display = 'block';
-                    document.getElementById('commands-card').style.display = 'block';
-                    document.getElementById('test-card').style.display = 'block';
+                    renderDevicesList();
+                    renderSpeakerList();
                     showAlert('✅ 设备列表已加载', 'success');
                 }
             } catch (e) {
@@ -400,131 +772,98 @@
             }
         }
 
-        function renderDomainTabs() {
-            const tabs = document.getElementById('domain-tabs');
-            const domainNames = {
-                climate: '❄️ 空调',
-                vacuum: '🤖 扫地机器人',
-                light: '💡 灯',
-                switch: '🔌 开关',
-                fan: '🌀 风扇',
-                media_player: '🔊 音箱/媒体',
-                sensor: '📊 传感器',
-                other: '📦 其他'
-            };
+        async function discoverAndBindAll() {
+            showAlert('🔍 正在发现并绑定设备...', 'info');
+            await discoverEntities();
             
-            let html = '';
-            const domains = Object.keys(entities).filter(d => entities[d] && entities[d].length > 0);
-            const orderedDomains = ['climate', 'vacuum', 'light', 'switch', 'fan', 'media_player', 'sensor', 'other'].filter(d => domains.includes(d));
-            for (const domain of orderedDomains.length > 0 ? orderedDomains : domains) {
-                const count = entities[domain].length;
-                const name = domainNames[domain] || domain;
-                html += `<div class="domain-tab ${domain === currentDomain ? 'active' : ''}" onclick="switchDomain('${domain}')">${name} (${count})</div>`;
+            let boundCount = 0;
+            for (const [domain, domainEntities] of Object.entries(entities)) {
+                for (const entity of domainEntities) {
+                    const entityId = entity.entity_id;
+                    let alreadyBound = false;
+                    for (const binding of Object.values(bindings)) {
+                        if (binding.entity_id === entityId) {
+                            alreadyBound = true;
+                            break;
+                        }
+                    }
+                    if (!alreadyBound) {
+                        const key = entityId.replace(/\./g, '_');
+                        bindings[key] = {
+                            name: entity.name,
+                            entity_id: entityId,
+                            device_type: getDeviceType(entityId),
+                            keywords: generateKeywords(entity.name)
+                        };
+                        boundCount++;
+                    }
+                }
             }
-            tabs.innerHTML = html;
-        }
-
-        function switchDomain(domain) {
-            currentDomain = domain;
-            renderDomainTabs();
-            renderEntities();
-        }
-
-        function filterEntities() {
-            renderEntities();
-        }
-
-        function renderEntities() {
-            const list = document.getElementById('entity-list');
-            const search = document.getElementById('search-input').value.toLowerCase();
             
-            const domainEntities = entities[currentDomain] || [];
-            const filtered = domainEntities.filter(e => 
-                e.name.toLowerCase().includes(search) || 
+            renderDevicesList();
+            renderBindings();
+            updateDashboard();
+            showAlert(`✅ 成功绑定 ${boundCount} 个新设备，关键词已自动生成`, 'success');
+            saveConfig();
+        }
+
+        function filterDevices() {
+            renderDevicesList();
+        }
+
+        function renderDevicesList() {
+            const list = document.getElementById('devices-list');
+            const search = document.getElementById('device-search').value.toLowerCase();
+            const filter = document.getElementById('device-filter').value;
+
+            let allEntities = [];
+            for (const [domain, domainEntities] of Object.entries(entities)) {
+                for (const entity of domainEntities) {
+                    const deviceType = getDeviceType(entity.entity_id);
+                    if (filter === 'all' || deviceType === filter) {
+                        allEntities.push({ ...entity, domain, device_type: deviceType });
+                    }
+                }
+            }
+
+            const filtered = allEntities.filter(e =>
+                e.name.toLowerCase().includes(search) ||
                 e.entity_id.toLowerCase().includes(search)
             );
 
             if (filtered.length === 0) {
-                list.innerHTML = '<div class="empty-state"><p>没有找到设备</p></div>';
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔍</div>
+                        <p>没有找到设备</p>
+                    </div>
+                `;
                 return;
             }
 
             let html = '';
             for (const entity of filtered) {
                 const isBound = Object.values(bindings).some(b => b.entity_id === entity.entity_id);
-                const type = getDeviceType(entity.entity_id);
                 html += `
-                    <div class="entity-item ${isBound ? 'selected' : ''}" onclick="toggleBinding('${entity.entity_id}')">
-                        <div class="entity-info">
-                            <div class="entity-name">${isBound ? '✅ ' : ''}${entity.name}</div>
-                            <div class="entity-id">${entity.entity_id}</div>
+                    <div class="entity-card ${isBound ? 'selected' : ''}" onclick="toggleBinding('${entity.entity_id}')">
+                        <div class="entity-header">
+                            <span class="entity-name">${isBound ? '✅ ' : ''}${entity.name}</span>
+                            <span class="entity-type type-${entity.device_type}">${getTypeLabel(entity.device_type)}</span>
                         </div>
-                        <span class="device-type type-${type}">${getTypeLabel(type)}</span>
-                        <div class="entity-state">${entity.state}</div>
+                        <div class="entity-id">${entity.entity_id}</div>
+                        <div class="entity-state ${entity.state === 'off' || entity.state === 'unavailable' ? 'off' : ''}">
+                            状态: ${entity.state}
+                        </div>
                     </div>
                 `;
             }
             list.innerHTML = html;
-        }
-
-        async function discoverSpeakersFromHA() {
-            try {
-                const resp = await fetch('/api/speakers/discover');
-                const result = await resp.json();
-                if (result.success && result.speakers) {
-                    speakerEntities = result.speakers;
-                    renderSpeakerList();
-                    showAlert('✅ 音箱列表已刷新', 'success');
-                } else {
-                    showAlert('获取音箱列表失败: ' + (result.error || '未知错误'), 'error');
-                }
-            } catch (e) {
-                showAlert('获取音箱列表失败: ' + e.message, 'error');
-            }
-        }
-
-        function renderSpeakerList() {
-            const list = document.getElementById('speaker-list');
-            const speakers = speakerEntities.length > 0 ? speakerEntities : (entities.media_player || []);
-            
-            if (speakers.length === 0) {
-                list.innerHTML = '<div class="empty-state"><p>没有找到音箱实体，请点击"🔍刷新音箱列表"或确认小米MIoT插件已配置</p></div>';
-                return;
-            }
-
-            let html = '';
-            for (const sp of speakers) {
-                const isSelected = selectedSpeakers.includes(sp.entity_id);
-                const typeLabel = sp.type === 'conversation' ? 'conversation' : 'media_player';
-                const typeClass = sp.type === 'conversation' ? 'conversation-tag' : 'media-player-tag';
-                const isXiaomiBadge = sp.is_xiaomi ? '<span class="xiaomi-badge">小米</span>' : '';
-                html += `
-                    <div class="speaker-item ${isSelected ? 'selected' : ''}" onclick="toggleSpeaker('${sp.entity_id}')">
-                        <input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();toggleSpeaker('${sp.entity_id}')">
-                        <div class="speaker-info">
-                            <div class="speaker-name">${sp.name} ${isXiaomiBadge} <span class="${typeClass}">${typeLabel}</span></div>
-                            <div class="speaker-id">${sp.entity_id}</div>
-                        </div>
-                        <div class="entity-state" style="font-size: 11px;">${sp.state || '-'}</div>
-                    </div>
-                `;
-            }
-            list.innerHTML = html;
-        }
-
-        function toggleSpeaker(entityId) {
-            if (selectedSpeakers.includes(entityId)) {
-                selectedSpeakers = selectedSpeakers.filter(id => id !== entityId);
-            } else {
-                selectedSpeakers.push(entityId);
-            }
-            renderSpeakerList();
         }
 
         function toggleBinding(entityId) {
             let found = false;
             let foundKey = null;
-            
+
             for (const [key, binding] of Object.entries(bindings)) {
                 if (binding.entity_id === entityId) {
                     found = true;
@@ -542,29 +881,76 @@
                     entity = domainEntities.find(e => e.entity_id === entityId);
                     if (entity) break;
                 }
-                
+
                 if (entity) {
                     const key = entityId.replace(/\./g, '_');
                     bindings[key] = {
                         name: entity.name,
                         entity_id: entityId,
                         device_type: getDeviceType(entityId),
-                        keywords: [entity.name]
+                        keywords: generateKeywords(entity.name)
                     };
-                    showAlert(`已添加 ${entity.name} 到绑定列表`, 'success');
+                    showAlert(`✅ 已添加 ${entity.name}，关键词已自动生成`, 'success');
                 }
             }
 
-            renderEntities();
+            renderDevicesList();
             renderBindings();
+            updateDashboard();
+        }
+
+        function renderSpeakerList() {
+            const list = document.getElementById('speaker-list');
+            const speakers = entities.media_player || [];
+
+            if (speakers.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">🔊</div>
+                        <p>没有找到媒体播放器实体</p>
+                        <p style="font-size: 13px;">请确认小米MIoT插件已配置</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            for (const sp of speakers) {
+                const isSelected = selectedSpeakers.includes(sp.entity_id);
+                html += `
+                    <div class="speaker-card ${isSelected ? 'selected' : ''}" onclick="toggleSpeaker('${sp.entity_id}')">
+                        <input type="checkbox" class="speaker-checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();toggleSpeaker('${sp.entity_id}')">
+                        <div class="speaker-info">
+                            <div class="speaker-name">${sp.name}</div>
+                            <div class="speaker-id">${sp.entity_id}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+
+        function toggleSpeaker(entityId) {
+            if (selectedSpeakers.includes(entityId)) {
+                selectedSpeakers = selectedSpeakers.filter(id => id !== entityId);
+            } else {
+                selectedSpeakers.push(entityId);
+            }
+            renderSpeakerList();
         }
 
         function renderBindings() {
             const list = document.getElementById('bindings-list');
             const keys = Object.keys(bindings);
-            
+
             if (keys.length === 0) {
-                list.innerHTML = '<div class="empty-state"><p>还没有绑定设备，点击上方设备添加绑定</p></div>';
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="icon">📋</div>
+                        <p>还没有绑定设备</p>
+                        <p style="font-size: 13px;">点击上方设备卡片添加绑定</p>
+                    </div>
+                `;
                 return;
             }
 
@@ -572,10 +958,7 @@
             for (const [key, binding] of Object.entries(bindings)) {
                 const type = binding.device_type || getDeviceType(binding.entity_id);
                 const keywordsHtml = (binding.keywords || []).map((kw, idx) => `
-                    <span class="keyword-tag">
-                        ${kw}
-                        <span class="remove" onclick="removeKeyword('${key}', ${idx})">×</span>
-                    </span>
+                    <span class="keyword-tag">${kw} <span class="remove" onclick="removeKeyword('${key}', ${idx})">×</span></span>
                 `).join('');
 
                 let roomsHtml = '';
@@ -584,30 +967,30 @@
                     const roomEntries = Object.entries(binding.rooms);
                     const roomItems = roomEntries.map(([roomKey, room], idx) => `
                         <div class="room-item">
-                            <input type="text" class="room-name" value="${room.name}" placeholder="房间名称" onchange="updateRoom('${key}', '${roomKey}', 'name', this.value)">
-                            <input type="number" class="room-id" value="${room.segment_id}" placeholder="区域ID" onchange="updateRoom('${key}', '${roomKey}', 'segment_id', parseInt(this.value))">
-                            <select style="padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;" onchange="updateRoom('${key}', '${roomKey}', 'clean_mode', this.value)">
-                                <option value="sweep_and_mop" ${room.clean_mode==='sweep_and_mop'?'selected':''}>扫拖</option>
-                                <option value="sweep" ${room.clean_mode==='sweep'?'selected':''}>仅清扫</option>
-                                <option value="mop" ${room.clean_mode==='mop'?'selected':''}>仅拖地</option>
+                            <input type="text" class="room-name-input" value="${room.name}" placeholder="房间名称" onchange="updateRoom('${key}', '${roomKey}', 'name', this.value)">
+                            <input type="number" class="room-id-input" value="${room.segment_id}" placeholder="区域ID" onchange="updateRoom('${key}', '${roomKey}', 'segment_id', parseInt(this.value))">
+                            <select class="room-select" onchange="updateRoom('${key}', '${roomKey}', 'clean_mode', this.value)">
+                                <option value="sweep_and_mop" ${room.clean_mode === 'sweep_and_mop' ? 'selected' : ''}>扫拖一体</option>
+                                <option value="sweep" ${room.clean_mode === 'sweep' ? 'selected' : ''}>仅清扫</option>
+                                <option value="mop" ${room.clean_mode === 'mop' ? 'selected' : ''}>仅拖地</option>
                             </select>
-                            <input type="number" value="${room.repeats || 1}" min="1" max="3" style="width:60px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;font-size:12px;" onchange="updateRoom('${key}', '${roomKey}', 'repeats', parseInt(this.value))" title="清扫次数">
-                            <span style="font-size:11px;color:#666;">次</span>
+                            <input type="number" value="${room.repeats || 1}" min="1" max="3" style="width: 70px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: var(--radius); background: var(--bg-secondary); color: var(--text-primary); font-size: 13px;" onchange="updateRoom('${key}', '${roomKey}', 'repeats', parseInt(this.value))" title="清扫次数">
+                            <span style="font-size: 13px; color: var(--text-muted);">次</span>
                             <button class="btn btn-danger btn-small" onclick="removeRoom('${key}', '${roomKey}')">删除</button>
                         </div>
                     `).join('');
 
                     roomsHtml = `
                         <div class="rooms-section">
-                            <h4>🏠 房间区域配置（配置后可以直接说"打扫餐厅"等指定区域清扫）</h4>
-                            <div style="margin-bottom: 10px;">
+                            <div class="rooms-title">🏠 房间区域配置</div>
+                            <div style="margin-bottom: 12px;">
                                 <button class="btn btn-primary btn-small" onclick="fetchRoomsFromHA('${key}', '${binding.entity_id}')">🔍 从HA自动获取房间列表</button>
-                                <span class="hint" style="margin-left: 8px;">点击自动从扫地机器人获取已编辑的房间，无需手动输入ID</span>
+                                <span class="hint" style="margin-left: 10px;">自动从扫地机器人获取已编辑的房间，无需手动输入ID</span>
                             </div>
                             ${roomItems}
-                            <div class="add-room">
-                                <input type="text" id="room-name-${key}" placeholder="房间名称，如：餐厅" style="width:120px;">
-                                <input type="number" id="room-id-${key}" placeholder="区域ID" style="width:100px;">
+                            <div class="room-item">
+                                <input type="text" id="room-name-${key}" placeholder="房间名称，如：餐厅" class="room-name-input">
+                                <input type="number" id="room-id-${key}" placeholder="区域ID" class="room-id-input">
                                 <button class="btn btn-secondary btn-small" onclick="addRoom('${key}')">➕ 添加房间</button>
                             </div>
                         </div>
@@ -615,32 +998,36 @@
                 }
 
                 html += `
-                    <div class="binding-item">
+                    <div class="binding-card">
                         <div class="binding-header">
                             <span class="binding-name">
-                                <span class="device-type type-${type}">${getTypeLabel(type)}</span>
+                                <span class="entity-type type-${type}">${getTypeLabel(type)}</span>
                                 ${binding.name}
                             </span>
-                            <div>
-                                <select class="type-select" onchange="changeDeviceType('${key}', this.value)">
-                                    <option value="climate" ${type==='climate'?'selected':''}>❄️ 空调</option>
-                                    <option value="vacuum" ${type==='vacuum'?'selected':''}>🤖 扫地机器人</option>
-                                    <option value="light" ${type==='light'?'selected':''}>💡 灯</option>
-                                    <option value="switch" ${type==='switch'?'selected':''}>🔌 开关</option>
-                                    <option value="fan" ${type==='fan'?'selected':''}>🌀 风扇</option>
-                                    <option value="refrigerator" ${type==='refrigerator'?'selected':''}>🧊 冰箱</option>
-                                    <option value="dishwasher" ${type==='dishwasher'?'selected':''}>🍽️ 洗碗机</option>
-                                    <option value="washing_machine" ${type==='washing_machine'?'selected':''}>👕 洗衣机</option>
-                                    <option value="dryer" ${type==='dryer'?'selected':''}>🔥 烘干机</option>
+                            <div class="binding-actions">
+                                <select class="room-select" onchange="changeDeviceType('${key}', this.value)">
+                                    <option value="climate" ${type === 'climate' ? 'selected' : ''}>❄️ 空调</option>
+                                    <option value="vacuum" ${type === 'vacuum' ? 'selected' : ''}>🤖 扫地机器人</option>
+                                    <option value="light" ${type === 'light' ? 'selected' : ''}>💡 灯</option>
+                                    <option value="switch" ${type === 'switch' ? 'selected' : ''}>🔌 开关</option>
+                                    <option value="fan" ${type === 'fan' ? 'selected' : ''}>🌀 风扇</option>
+                                    <option value="refrigerator" ${type === 'refrigerator' ? 'selected' : ''}>🧊 冰箱</option>
+                                    <option value="dishwasher" ${type === 'dishwasher' ? 'selected' : ''}>🍽️ 洗碗机</option>
+                                    <option value="washing_machine" ${type === 'washing_machine' ? 'selected' : ''}>👕 洗衣机</option>
+                                    <option value="dryer" ${type === 'dryer' ? 'selected' : ''}>🔥 烘干机</option>
+                                    <option value="stove" ${type === 'stove' ? 'selected' : ''}>🔥 灶台</option>
+                                    <option value="range_hood" ${type === 'range_hood' ? 'selected' : ''}>🍳 油烟机</option>
+                                    <option value="water_heater" ${type === 'water_heater' ? 'selected' : ''}>🚿 热水器</option>
+                                    <option value="air_purifier" ${type === 'air_purifier' ? 'selected' : ''}>🌬️ 净化器</option>
+                                    <option value="humidifier" ${type === 'humidifier' ? 'selected' : ''}>💧 加湿器</option>
+                                    <option value="cover" ${type === 'cover' ? 'selected' : ''}>🪟 窗帘</option>
                                 </select>
-                                <button class="btn btn-danger btn-small" onclick="removeBinding('${key}')" style="margin-left: 8px;">删除</button>
+                                <button class="btn btn-danger btn-small" onclick="removeBinding('${key}')">删除</button>
                             </div>
                         </div>
                         <div class="binding-entity">${binding.entity_id}</div>
-                        <div class="keywords-tags">
-                            ${keywordsHtml}
-                        </div>
-                        <div class="add-keyword">
+                        <div class="keyword-tags">${keywordsHtml}</div>
+                        <div class="add-keyword-row">
                             <input type="text" id="input-${key}" placeholder="添加关键词/别名..." onkeypress="if(event.key==='Enter')addKeyword('${key}')">
                             <button class="btn btn-secondary btn-small" onclick="addKeyword('${key}')">添加</button>
                         </div>
@@ -651,21 +1038,53 @@
             list.innerHTML = html;
         }
 
+        function addKeyword(key) {
+            const input = document.getElementById(`input-${key}`);
+            const kw = input.value.trim();
+            if (!bindings[key].keywords) {
+                bindings[key].keywords = [];
+            }
+            if (kw && !bindings[key].keywords.includes(kw)) {
+                bindings[key].keywords.push(kw);
+                renderBindings();
+                showAlert(`✅ 已添加关键词: ${kw}`, 'success');
+            }
+            input.value = '';
+        }
+
+        function removeKeyword(key, idx) {
+            bindings[key].keywords.splice(idx, 1);
+            renderBindings();
+        }
+
+        function removeBinding(key) {
+            delete bindings[key];
+            renderDevicesList();
+            renderBindings();
+            updateDashboard();
+            showAlert('已删除绑定', 'info');
+        }
+
+        function changeDeviceType(key, type) {
+            bindings[key].device_type = type;
+            renderBindings();
+        }
+
         function addRoom(bindingKey) {
             const nameInput = document.getElementById(`room-name-${bindingKey}`);
             const idInput = document.getElementById(`room-id-${bindingKey}`);
             const roomName = nameInput.value.trim();
             const segmentId = parseInt(idInput.value);
-            
+
             if (!roomName || isNaN(segmentId)) {
                 showAlert('请填写房间名称和区域ID', 'error');
                 return;
             }
-            
+
             if (!bindings[bindingKey].rooms) {
                 bindings[bindingKey].rooms = {};
             }
-            
+
             const roomKey = roomName.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
             bindings[bindingKey].rooms[roomKey] = {
                 name: roomName,
@@ -673,11 +1092,11 @@
                 clean_mode: 'sweep_and_mop',
                 repeats: 1
             };
-            
+
             nameInput.value = '';
             idInput.value = '';
             renderBindings();
-            showAlert(`已添加房间: ${roomName} (ID: ${segmentId})`, 'success');
+            showAlert(`✅ 已添加房间: ${roomName}`, 'success');
         }
 
         function updateRoom(bindingKey, roomKey, field, value) {
@@ -695,144 +1114,41 @@
             }
         }
 
-        function changeDeviceType(key, type) {
-            bindings[key].device_type = type;
-        }
-
-        function addKeyword(key) {
-            const input = document.getElementById(`input-${key}`);
-            const kw = input.value.trim();
-            if (!bindings[key].keywords) {
-                bindings[key].keywords = [];
-            }
-            if (kw && !bindings[key].keywords.includes(kw)) {
-                bindings[key].keywords.push(kw);
-                renderBindings();
-                showAlert(`已添加关键词: ${kw}`, 'success');
-            }
-            input.value = '';
-        }
-
-        function removeKeyword(key, idx) {
-            bindings[key].keywords.splice(idx, 1);
-            renderBindings();
-        }
-
-        function removeBinding(key) {
-            delete bindings[key];
-            renderEntities();
-            renderBindings();
-            showAlert('已删除绑定', 'info');
-        }
-
-        async function loadCommandsList() {
-            try {
-                const resp = await fetch('/api/commands/list');
-                if (resp.ok) {
-                    commandsList = await resp.json();
-                    renderCommandTabs();
-                    renderCommandsList();
-                    document.getElementById('commands-card').style.display = 'block';
-                }
-            } catch (e) {
-                console.log('加载指令列表失败:', e);
-            }
-        }
-
-        function renderCommandTabs() {
-            const tabs = document.getElementById('command-domain-tabs');
-            const categoryLabels = {
-                climate: '❄️ 空调',
-                vacuum: '🤖 扫地机器人',
-                light: '💡 灯',
-                switch: '🔌 开关',
-                fan: '🌀 风扇',
-                refrigerator: '🧊 冰箱',
-                dishwasher: '🍽️ 洗碗机',
-                washing_machine: '👕 洗衣机',
-                dryer: '🔥 烘干机',
-                other: '📦 其他',
-            };
-            
-            let html = '';
-            const categories = commandsList.categories || {};
-            for (const [cat, cmds] of Object.entries(categories)) {
-                if (cmds && cmds.length > 0) {
-                    html += `<div class="domain-tab" onclick="renderCommandsList('${cat}')">${categoryLabels[cat] || cat} (${cmds.length})</div>`;
-                }
-            }
-            
-            if (html === '') {
-                html = '<div style="color: #999;">暂无已配置的语音指令，请先绑定设备</div>';
-            }
-            
-            tabs.innerHTML = html;
-        }
-
-        function renderCommandsList(category = null) {
-            const list = document.getElementById('commands-list');
-            const categories = commandsList.categories || {};
-            
-            let allCommands = [];
-            if (category && categories[category]) {
-                allCommands = categories[category];
-            } else {
-                for (const cmds of Object.values(categories)) {
-                    if (cmds) allCommands.push(...cmds);
-                }
-            }
-            
-            if (allCommands.length === 0) {
-                list.innerHTML = '<div class="empty-state"><p>暂无已配置的语音指令，请先绑定设备</p></div>';
+        async function fetchRoomsFromHA(bindingKey, entityId) {
+            if (!entityId) {
+                showAlert('未选择扫地机器人实体', 'error');
                 return;
             }
-
-            let html = '';
-            for (const cmd of allCommands) {
-                const typeLabel = cmd.device_type_label || cmd.device_type;
-                const keywordsHtml = cmd.keywords.map(kw => `
-                    <span class="command-keyword" onclick="copyToClipboard('${kw}')" title="点击复制">${kw}</span>
-                `).join('');
-                
-                let roomsHtml = '';
-                if (cmd.rooms && Object.keys(cmd.rooms).length > 0) {
-                    roomsHtml = `
-                        <div class="command-rooms">
-                            <div style="font-size: 11px; color: #888; margin-bottom: 4px;">🏠 支持的房间区域:</div>
-                            ${Object.entries(cmd.rooms).map(([name, room]) => `
-                                <div class="command-room-item">
-                                    <strong>${name}</strong> (ID: ${room.segment_id}) - ${room.clean_mode === 'sweep' ? '仅清扫' : room.clean_mode === 'mop' ? '仅拖地' : '扫拖'}${room.repeats > 1 ? `×${room.repeats}` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
+            showAlert('🔍 正在从HA获取房间列表...', 'info');
+            try {
+                const resp = await fetch(`/api/vacuum/rooms?entity_id=${encodeURIComponent(entityId)}`);
+                const result = await resp.json();
+                if (result.success && result.rooms && result.rooms.length > 0) {
+                    if (!bindings[bindingKey].rooms) {
+                        bindings[bindingKey].rooms = {};
+                    }
+                    let addedCount = 0;
+                    for (const room of result.rooms) {
+                        const roomKey = room.name.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
+                        const exists = Object.values(bindings[bindingKey].rooms).some(r => r.segment_id === room.id);
+                        if (!exists) {
+                            bindings[bindingKey].rooms[roomKey] = {
+                                name: room.name,
+                                segment_id: room.id,
+                                clean_mode: 'sweep_and_mop',
+                                repeats: 1
+                            };
+                            addedCount++;
+                        }
+                    }
+                    renderBindings();
+                    showAlert(`✅ 已成功获取${result.rooms.length}个房间${addedCount > 0 ? `，新增${addedCount}个` : ''}`, 'success');
+                } else {
+                    showAlert('❌ 未能获取到房间列表，请确保扫地机器人已在米家APP中编辑好房间分区', 'error');
                 }
-                
-                html += `
-                    <div class="command-card">
-                        <div class="command-header">
-                            <span class="command-name">
-                                <span class="command-type type-${cmd.device_type}">${typeLabel}</span>
-                                ${cmd.name}
-                            </span>
-                            <span style="font-size: 12px; color: #666; font-family: monospace;">${cmd.entity_id}</span>
-                        </div>
-                        <div class="command-keywords">
-                            ${keywordsHtml}
-                        </div>
-                        ${roomsHtml}
-                    </div>
-                `;
+            } catch (e) {
+                showAlert('获取房间失败: ' + e.message, 'error');
             }
-            list.innerHTML = html;
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                showAlert(`✅ 已复制: ${text}`, 'success');
-            }).catch(() => {
-                showAlert('复制失败', 'error');
-            });
         }
 
         async function saveConfig() {
@@ -870,12 +1186,6 @@
                 if (b.device_type === 'vacuum' && !b.rooms) {
                     b.rooms = {};
                 }
-                if (b.device_type === 'vacuum' && !b.default_clean_mode) {
-                    b.default_clean_mode = 'sweep_and_mop';
-                }
-                if (b.device_type === 'vacuum' && !b.default_repeats) {
-                    b.default_repeats = 1;
-                }
             }
 
             const newConfig = {
@@ -905,234 +1215,7 @@
                 });
                 if (resp.ok) {
                     config = newConfig;
-                    showAlert('✅ 配置保存成功！服务将使用新配置', 'success');
+                    updateDashboard();
+                    showAlert('✅ 配置保存成功！', 'success');
                 } else {
-                    const err = await resp.json();
-                    showAlert('❌ 保存失败: ' + (err.detail || JSON.stringify(err)), 'error');
-                }
-            } catch (e) {
-                showAlert('❌ 请求失败: ' + e.message, 'error');
-            }
-        }
-
-        async function restartService() {
-            if (!confirm('确定要重启服务吗？重启后页面会暂时无法访问。')) {
-                return;
-            }
-            try {
-                await fetch('/api/restart', { method: 'POST' });
-                showAlert('🔄 服务正在重启，请稍候刷新页面...', 'info');
-            } catch (e) {
-                showAlert('重启指令已发送', 'info');
-            }
-        }
-
-        async function testCommand() {
-            const text = document.getElementById('test-text').value;
-            if (!text) {
-                showAlert('请输入指令', 'error');
-                return;
-            }
-
-            try {
-                const resp = await fetch('/api/command/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text })
-                });
-                const result = await resp.json();
-                const resultDiv = document.getElementById('test-result');
-                
-                if (result.matched && result.parsed) {
-                    const p = result.parsed;
-                    const actionMap = {
-                        turn_on: '🔛 打开设备',
-                        turn_off: '🔴 关闭设备',
-                        adjust: '⚙️ 调节设置',
-                        start: '▶️ 开始全屋清扫',
-                        stop: '⏹️ 停止',
-                        pause: '⏸️ 暂停',
-                        return_to_base: '🏠 返回充电',
-                        clean_segment: '🧹 指定区域清扫',
-                        query: '❓ 查询状态'
-                    };
-                    const cleanModeMap = {
-                        sweep: '仅清扫',
-                        sweep_and_mop: '扫拖一体',
-                        mop: '仅拖地'
-                    };
-                    const action = actionMap[p.action] || p.action || '其他操作';
-                    let details = `✅ 匹配到设备: <b>${p.name}</b> (${getTypeLabel(p.device_type)})<br>操作: ${action}`;
-                    if (p.temperature) details += `<br>温度: ${p.temperature}°C`;
-                    if (p.mode) {
-                        const modeText = {cool:'制冷', heat:'制热', dry:'除湿', auto:'自动', fan_only:'送风'}[p.mode] || p.mode;
-                        details += `<br>模式: ${modeText}`;
-                    }
-                    if (p.room) details += `<br>房间: ${p.room}`;
-                    if (p.clean_mode) details += `<br>清扫模式: ${cleanModeMap[p.clean_mode] || p.clean_mode}`;
-                    if (p.repeats && p.repeats > 1) details += `<br>清扫次数: ${p.repeats}次`;
-                    resultDiv.innerHTML = `<div class="alert success">${details}</div>`;
-                } else {
-                    resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令。请确认设备已绑定且关键词包含在指令中。</div>';
-                }
-            } catch (e) {
-                showAlert('测试失败: ' + e.message, 'error');
-            }
-        }
-
-        async function discoverNotifyServices() {
-            try {
-                const resp = await fetch('/api/notify/services');
-                const result = await resp.json();
-                const listEl = document.getElementById('notify-services-list');
-                const savedServices = window._savedNotifyServices || getSelectedNotifyServices();
-                
-                if (result.success && result.services && result.services.length > 0) {
-                    listEl.innerHTML = '';
-                    for (const svc of result.services) {
-                        const item = document.createElement('label');
-                        item.style.cssText = 'display: flex; align-items: center; gap: 8px; padding: 6px 0; cursor: pointer;';
-                        const checkbox = document.createElement('input');
-                        checkbox.type = 'checkbox';
-                        checkbox.value = svc.id;
-                        checkbox.dataset.name = svc.name;
-                        checkbox.style.width = 'auto';
-                        if (savedServices.includes(svc.id)) {
-                            checkbox.checked = true;
-                        }
-                        const span = document.createElement('span');
-                        span.textContent = svc.name;
-                        span.style.cssText = 'font-size: 14px;';
-                        item.appendChild(checkbox);
-                        item.appendChild(span);
-                        listEl.appendChild(item);
-                    }
-                    window._savedNotifyServices = null;
-                } else {
-                    listEl.innerHTML = '<div style="color: #999; font-size: 13px;">未发现通知服务，请确保已安装HA手机APP并登录</div>';
-                    showAlert('未发现通知服务，请确保已安装HA手机APP', 'info');
-                }
-            } catch (e) {
-                console.log('获取通知服务失败:', e);
-                showAlert('获取通知服务失败: ' + e.message, 'error');
-            }
-        }
-
-        function getSelectedNotifyServices() {
-            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
-            return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
-        }
-
-        function selectAllNotify() {
-            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = true);
-        }
-
-        function deselectAllNotify() {
-            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
-            checkboxes.forEach(cb => cb.checked = false);
-        }
-
-        async function testNotification() {
-            const notifyServices = getSelectedNotifyServices();
-            
-            if (notifyServices.length === 0) {
-                showAlert('请先勾选至少一个通知设备', 'error');
-                return;
-            }
-
-            const customMessage = document.getElementById('notify-test-message').value.trim();
-            const title = '🧪 测试通知';
-            const message = customMessage || '已经打开小孩空调，模式制冷温度26度';
-
-            try {
-                const resp = await fetch('/api/notify/test', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        notify_services: notifyServices,
-                        title: title,
-                        message: message
-                    })
-                });
-                const result = await resp.json();
-                if (result.success) {
-                    showAlert(`✅ 测试通知已发送到${notifyServices.length}个设备，请检查手机！`, 'success');
-                } else {
-                    showAlert('❌ 发送失败: ' + (result.error || '未知错误'), 'error');
-                }
-            } catch (e) {
-                showAlert('❌ 请求失败: ' + e.message, 'error');
-            }
-        }
-
-        async function executeCommand() {
-            const text = document.getElementById('test-text').value;
-            if (!text) {
-                showAlert('请输入指令', 'error');
-                return;
-            }
-
-            const resultDiv = document.getElementById('test-result');
-            resultDiv.innerHTML = '<div class="alert info">🚀 正在执行指令，请稍候...</div>';
-
-            try {
-                const resp = await fetch('/api/command/execute', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text })
-                });
-                const result = await resp.json();
-                
-                if (result.success) {
-                    resultDiv.innerHTML = `<div class="alert success">✅ 执行成功！${result.message}</div>`;
-                    showAlert('✅ 指令执行完成，检查小爱音箱和手机通知', 'success');
-                } else {
-                    resultDiv.innerHTML = `<div class="alert error">❌ 执行失败: ${result.error || result.message || '未知错误'}</div>`;
-                }
-            } catch (e) {
-                resultDiv.innerHTML = `<div class="alert error">❌ 请求失败: ${e.message}</div>`;
-            }
-        }
-
-        async function fetchRoomsFromHA(bindingKey, entityId) {
-            if (!entityId) {
-                showAlert('未选择扫地机器人实体', 'error');
-                return;
-            }
-            showAlert('正在从HA获取房间列表...', 'info');
-            try {
-                const resp = await fetch(`/api/vacuum/rooms?entity_id=${encodeURIComponent(entityId)}`);
-                const result = await resp.json();
-                if (result.success && result.rooms && result.rooms.length > 0) {
-                    if (!bindings[bindingKey].rooms) {
-                        bindings[bindingKey].rooms = {};
-                    }
-                    let addedCount = 0;
-                    for (const room of result.rooms) {
-                        const roomKey = room.name.replace(/[^a-zA-Z0-9_\u4e00-\u9fa5]/g, '_');
-                        const exists = Object.values(bindings[bindingKey].rooms).some(r => r.segment_id === room.id);
-                        if (!exists) {
-                            bindings[bindingKey].rooms[roomKey] = {
-                                name: room.name,
-                                segment_id: room.id,
-                                clean_mode: 'sweep_and_mop',
-                                repeats: 1
-                            };
-                            addedCount++;
-                        }
-                    }
-                    renderBindings();
-                    showAlert(`✅ 已成功获取${result.rooms.length}个房间${addedCount > 0 ? `，新增${addedCount}个` : ''}，请确认后保存配置`, 'success');
-                } else {
-                    showAlert('❌ 未能获取到房间列表，请确保扫地机器人已在米家APP中编辑好房间分区，或手动添加', 'error');
-                }
-            } catch (e) {
-                showAlert('获取房间失败: ' + e.message, 'error');
-            }
-        }
-
-        loadConfig();
-    </script>
-</body>
-</html>
+                    const err = await resp

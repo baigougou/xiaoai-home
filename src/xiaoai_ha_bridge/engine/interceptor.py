@@ -185,24 +185,32 @@ class CommandInterceptor:
 
         clean_mode_text_map = {
             "sweep": "仅清扫",
-            "sweep_and_mop": "扫拖",
+            "sweep_and_mop": "扫拖一体",
+            "mop": "仅拖地",
+        }
+
+        mode_desc_map = {
+            "sweep": "仅扫地",
+            "sweep_and_mop": "扫一次拖一次",
             "mop": "仅拖地",
         }
 
         if action == "clean_segment" and segment_id is not None:
+            actual_mode = clean_mode or "sweep_and_mop"
             success = await self.ha_client.vacuum_clean_segment(
                 entity_id,
                 segment_ids=[segment_id],
                 repeats=repeats,
-                clean_mode=clean_mode or "sweep_and_mop"
+                clean_mode=actual_mode
             )
             if success:
-                mode_text = clean_mode_text_map.get(clean_mode or "sweep_and_mop", "扫拖")
+                mode_text = clean_mode_text_map.get(actual_mode, "扫拖一体")
+                mode_desc = mode_desc_map.get(actual_mode, "扫一次拖一次")
                 task_desc = f"{mode_text}{room}"
                 if repeats > 1:
                     task_desc += f"{repeats}次"
-                tts_msg = f"好的，{device_name}开始{task_desc}"
-                notify_msg = f"{device_name}开始{task_desc}"
+                tts_msg = f"好的，{device_name}开始{task_desc}，{mode_desc}"
+                notify_msg = f"{device_name}开始{task_desc}，{mode_desc}"
                 messages.append(tts_msg)
                 self.active_cleaning_tasks[entity_id] = {
                     "device_name": device_name,
@@ -212,10 +220,12 @@ class CommandInterceptor:
         elif action == "start":
             success = await self.ha_client.vacuum_start(entity_id)
             if success:
-                mode_text = clean_mode_text_map.get(clean_mode or "sweep_and_mop", "扫拖") if clean_mode else ""
+                actual_mode = clean_mode or "sweep_and_mop"
+                mode_text = clean_mode_text_map.get(actual_mode, "扫拖一体")
+                mode_desc = mode_desc_map.get(actual_mode, "扫一次拖一次")
                 task_desc = f"{mode_text}" if mode_text else "全屋清扫"
-                tts_msg = f"好的，{device_name}开始{task_desc}"
-                notify_msg = f"{device_name}开始{task_desc}"
+                tts_msg = f"好的，{device_name}开始{task_desc}，{mode_desc}"
+                notify_msg = f"{device_name}开始{task_desc}，{mode_desc}"
                 messages.append(tts_msg)
                 self.active_cleaning_tasks[entity_id] = {
                     "device_name": device_name,

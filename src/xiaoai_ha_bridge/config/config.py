@@ -39,7 +39,7 @@ class VacuumRoomConfig(BaseModel):
 class CommandConfig(BaseModel):
     name: str = Field(..., description="设备名称")
     entity_id: str = Field(..., description="Home Assistant实体ID")
-    device_type: str = Field(default="climate", description="设备类型: climate/vacuum/light/switch/fan等")
+    device_type: str = Field(default="climate", description="设备类型: climate/vacuum/light/switch/fan/refrigerator/dishwasher/washing_machine/dryer/stove/range_hood/water_heater/air_purifier/humidifier/cover等")
     keywords: list = Field(..., description="触发关键词列表")
     rooms: Dict[str, VacuumRoomConfig] = Field(default_factory=dict, description="扫地机器人房间区域配置（仅vacuum类型）")
     default_clean_mode: str = Field(default="sweep_and_mop", description="默认清扫模式")
@@ -90,7 +90,6 @@ class ConfigManager:
 
         if "commands" in data:
             for cmd_id, cmd in data["commands"].items():
-                # 清理命令中的额外字段
                 extra_fields = ["fridge_sensors", "self_clean_entities", "appliance_sensors"]
                 for field in extra_fields:
                     if field in cmd:
@@ -98,14 +97,36 @@ class ConfigManager:
                 
                 if "device_type" not in cmd:
                     entity_id = cmd.get("entity_id", "")
+                    entity_lower = entity_id.lower()
                     if entity_id.startswith("vacuum."):
                         cmd["device_type"] = "vacuum"
                     elif entity_id.startswith("light."):
                         cmd["device_type"] = "light"
-                    elif entity_id.startswith("switch."):
-                        cmd["device_type"] = "switch"
                     elif entity_id.startswith("fan."):
                         cmd["device_type"] = "fan"
+                    elif entity_id.startswith("cover."):
+                        cmd["device_type"] = "cover"
+                    elif entity_id.startswith("humidifier."):
+                        cmd["device_type"] = "humidifier"
+                    elif entity_id.startswith("switch."):
+                        if any(kw in entity_lower for kw in ["洗衣机", "washing_machine", "washer"]):
+                            cmd["device_type"] = "washing_machine"
+                        elif any(kw in entity_lower for kw in ["烘干机", "干衣机", "dryer"]):
+                            cmd["device_type"] = "dryer"
+                        elif any(kw in entity_lower for kw in ["冰箱", "refrigerator", "fridge"]):
+                            cmd["device_type"] = "refrigerator"
+                        elif any(kw in entity_lower for kw in ["洗碗机", "dishwasher"]):
+                            cmd["device_type"] = "dishwasher"
+                        elif any(kw in entity_lower for kw in ["灶台", "燃气灶", "stove", "gas"]):
+                            cmd["device_type"] = "stove"
+                        elif any(kw in entity_lower for kw in ["油烟机", "range_hood"]):
+                            cmd["device_type"] = "range_hood"
+                        elif any(kw in entity_lower for kw in ["热水器", "water_heater"]):
+                            cmd["device_type"] = "water_heater"
+                        elif any(kw in entity_lower for kw in ["净化器", "air_purifier"]):
+                            cmd["device_type"] = "air_purifier"
+                        else:
+                            cmd["device_type"] = "switch"
                     else:
                         cmd["device_type"] = "climate"
 

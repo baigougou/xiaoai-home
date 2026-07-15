@@ -3,7 +3,7 @@ version: '3.8'
 services:
   xiaoai-home-assistant:
     build:
-      context: https://github.com/baigougou/xiaoai-home.git#main
+      context: .
       dockerfile: Dockerfile
     container_name: xiaoai-ha-bridge
     restart: unless-stopped

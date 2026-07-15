@@ -40,7 +40,7 @@ async def startup_event():
     global ha_client, interceptor, poller, config
 
     setup_logging("INFO", "config/app.log")
-    logger.info("XiaoAI Home Assistant Bridge v0.2.3 启动中...")
+    logger.info("XiaoAI Home Assistant Bridge v0.2.4 启动中...")
 
     config_manager = ConfigManager()
     try:

@@ -260,8 +260,9 @@ class HomeAssistantClient:
     async def generic_turn_off(self, domain: str, entity_id: str) -> bool:
         return await self.call_service(domain, "turn_off", entity_id)
 
-    async def discover_entities(self) -> Dict[str, List[Dict[str, Any]]]:
+    async def discover_entities(self) -> Dict[str, Any]:
         entities = await self.get_all_states()
+        areas_map = await self.get_areas()
 
         categories = {
             "climate": [],
@@ -271,29 +272,131 @@ class HomeAssistantClient:
             "switch": [],
             "light": [],
             "fan": [],
+            "washing_machine": [],
+            "dryer": [],
+            "stove": [],
+            "range_hood": [],
+            "bathroom_heater": [],
+            "smart_socket": [],
+            "notify": [],
+            "cover": [],
+            "humidifier": [],
+            "other": [],
         }
 
         for entity in entities:
             entity_id = entity.get("entity_id", "")
             attributes = entity.get("attributes", {})
             friendly_name = attributes.get("friendly_name", entity_id)
-
+            state = entity.get("state", "")
+            
+            tags = []
+            label_key = None
+            for key in ["label", "labels", "device_class", "icon", "category", "tags", "device_label", "device_label_list"]:
+                if key in attributes:
+                    label_key = key
+                    value = attributes[key]
+                    if isinstance(value, list):
+                        tags = [str(v) for v in value if v]
+                    elif isinstance(value, dict):
+                        tags = [str(k) for k in value.keys() if k]
+                    else:
+                        tags = [str(value)]
+                    break
+            
+            area_id = None
+            for key in ["area_id", "area", "location"]:
+                if key in attributes:
+                    area_id = str(attributes[key])
+                    break
+            if not area_id:
+                device_id = attributes.get("device_id", "")
+                if device_id:
+                    try:
+                        device_resp = await self.client.get(
+                            f"{self.url}/api/config/devices/{device_id}",
+                            headers=self.headers
+                        )
+                        if device_resp.status_code == 200:
+                            device = device_resp.json()
+                            area_id = device.get("area_id", "")
+                    except:
+                        pass
+            
+            area_info = None
+            if area_id and area_id in areas_map:
+                area_info = areas_map[area_id]
+            
             entity_info = {
                 "entity_id": entity_id,
                 "name": friendly_name,
-                "state": entity.get("state", ""),
+                "state": state,
                 "domain": entity_id.split(".")[0] if "." in entity_id else "",
+                "tags": tags,
+                "area_id": area_id,
+                "area_name": area_info.get("name", "") if area_info else "",
+                "area_aliases": area_info.get("aliases", []) if area_info else [],
+                "attributes": {k: v for k, v in attributes.items() if isinstance(v, (str, int, float, bool))},
             }
 
             domain = entity_info["domain"]
-            if domain in categories:
-                categories[domain].append(entity_info)
+            name_lower = friendly_name.lower() if friendly_name else ""
+            entity_lower = entity_id.lower()
+            
+            category = "other"
+            
+            if domain == "climate":
+                category = "climate"
+            elif domain == "vacuum":
+                category = "vacuum"
+            elif domain == "media_player":
+                category = "media_player"
+            elif domain == "sensor":
+                category = "sensor"
+            elif domain == "light":
+                category = "light"
+            elif domain == "fan":
+                category = "fan"
+            elif domain == "cover":
+                category = "cover"
+            elif domain == "notify":
+                category = "notify"
+            elif domain == "switch":
+                washing_machine_keywords = ["洗衣机", "washing_machine", "washer"]
+                dryer_keywords = ["烘干机", "干衣机", "dryer"]
+                stove_keywords = ["灶台", "燃气灶", "煤气灶", "stove"]
+                range_hood_keywords = ["抽油烟机", "油烟机", "range_hood", "hood"]
+                bathroom_heater_keywords = ["浴霸"]
+                smart_socket_keywords = ["插座", "smart_plug", "smart_socket"]
+                humidifier_keywords = ["加湿器", "humidifier"]
+                
+                if any(kw in name_lower for kw in washing_machine_keywords):
+                    category = "washing_machine"
+                elif any(kw in name_lower for kw in dryer_keywords):
+                    category = "dryer"
+                elif any(kw in name_lower for kw in stove_keywords):
+                    category = "stove"
+                elif any(kw in name_lower for kw in range_hood_keywords):
+                    category = "range_hood"
+                elif any(kw in name_lower for kw in bathroom_heater_keywords):
+                    category = "bathroom_heater"
+                elif any(kw in name_lower for kw in smart_socket_keywords):
+                    category = "smart_socket"
+                elif any(kw in name_lower for kw in humidifier_keywords):
+                    category = "humidifier"
+                else:
+                    category = "switch"
+            elif domain == "humidifier":
+                category = "humidifier"
             else:
-                if "other" not in categories:
-                    categories["other"] = []
-                categories["other"].append(entity_info)
+                category = "other"
 
-        return categories
+            categories[category].append(entity_info)
+
+        return {
+            "entities": categories,
+            "areas": areas_map
+        }
 
     async def test_connection(self) -> bool:
         try:
@@ -305,3 +408,115 @@ class HomeAssistantClient:
         except Exception as e:
             logger.error(f"连接测试失败: {e}")
             return False
+
+    async def get_areas(self) -> Dict[str, Dict[str, Any]]:
+        try:
+            response = await self.client.get(
+                f"{self.url}/api/areas",
+                headers=self.headers
+            )
+            response.raise_for_status()
+            areas_data = response.json()
+            areas_map = {}
+            for area in areas_data:
+                area_id = area.get("area_id", "")
+                if area_id:
+                    areas_map[area_id] = {
+                        "name": area.get("name", area_id),
+                        "icon": area.get("icon", ""),
+                        "aliases": area.get("aliases", []),
+                        "id": area_id
+                    }
+            return areas_map
+        except Exception as e:
+            logger.error(f"获取区域信息失败: {e}")
+            return {}
+
+    async def get_area_by_entity(self, entity_id: str) -> Optional[str]:
+        try:
+            response = await self.client.get(
+                f"{self.url}/api/states/{entity_id}",
+                headers=self.headers
+            )
+            if response.status_code == 200:
+                state = response.json()
+                attributes = state.get("attributes", {})
+                for key in ["area_id", "area", "location"]:
+                    if key in attributes:
+                        return str(attributes[key])
+                device_id = attributes.get("device_id", "")
+                if device_id:
+                    device_resp = await self.client.get(
+                        f"{self.url}/api/config/devices/{device_id}",
+                        headers=self.headers
+                    )
+                    if device_resp.status_code == 200:
+                        device = device_resp.json()
+                        area_id = device.get("area_id", "")
+                        if area_id:
+                            return area_id
+            return None
+        except Exception as e:
+            logger.debug(f"获取实体区域信息失败 {entity_id}: {e}")
+            return None
+
+    async def discover_speakers(self) -> List[Dict[str, Any]]:
+        entities = await self.get_all_states()
+        speakers = []
+        seen_device_ids = set()
+        
+        conversation_patterns = [
+            "xiaomi_lx06",
+            "conversation",
+            "xiaoai",
+            "miot_speaker",
+            "xiaomi_speaker",
+        ]
+        
+        media_player_patterns = [
+            "xiaomi",
+            "xiaoai",
+            "lx06",
+            "miot",
+            "speaker",
+            "小爱",
+        ]
+        
+        for entity in entities:
+            entity_id = entity.get("entity_id", "")
+            attributes = entity.get("attributes", {})
+            friendly_name = attributes.get("friendly_name", entity_id)
+            domain = entity_id.split(".")[0] if "." in entity_id else ""
+            device_id = attributes.get("device_id", "")
+            
+            is_conversation = (
+                domain == "sensor" and
+                any(pattern.lower() in entity_id.lower() for pattern in conversation_patterns)
+            )
+            
+            is_media_player = (
+                domain == "media_player" and
+                any(pattern.lower() in entity_id.lower() for pattern in media_player_patterns)
+            )
+            
+            if is_conversation or is_media_player:
+                if device_id and device_id in seen_device_ids:
+                    continue
+                if device_id:
+                    seen_device_ids.add(device_id)
+                
+                speaker_type = "conversation" if is_conversation else "media_player"
+                entity_lower = entity_id.lower()
+                is_xiaomi = any(p in entity_lower for p in ["xiaomi", "xiaoai", "lx06", "miot", "小爱"])
+                
+                speakers.append({
+                    "entity_id": entity_id,
+                    "name": friendly_name,
+                    "type": speaker_type,
+                    "domain": domain,
+                    "is_xiaomi": is_xiaomi,
+                    "device_id": device_id,
+                    "state": entity.get("state", ""),
+                })
+        
+        return sorted(speakers, key=lambda x: (not x["is_xiaomi"], x["type"], x["name"]))

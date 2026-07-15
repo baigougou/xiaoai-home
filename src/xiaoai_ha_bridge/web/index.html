@@ -92,6 +92,18 @@
         .room-item .room-id { width: 80px; }
         .add-room { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
         .add-room input { padding: 4px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 12px; }
+        .command-card { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-bottom: 12px; }
+        .command-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .command-name { font-weight: 500; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+        .command-type { font-size: 12px; padding: 2px 8px; border-radius: 12px; }
+        .command-keywords { display: flex; flex-wrap: wrap; gap: 8px; }
+        .command-keyword { background: #e8f0fe; color: #1967d2; padding: 6px 14px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .command-keyword:hover { background: #1967d2; color: white; transform: scale(1.05); }
+        .command-rooms { margin-top: 8px; padding-top: 8px; border-top: 1px solid #e0e0e0; }
+        .command-room-item { font-size: 12px; color: #666; margin-bottom: 4px; }
+        .conversation-tag { background: #e8f5e9; color: #2e7d32; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .media-player-tag { background: #fce8e6; color: #c5221f; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
+        .xiaomi-badge { background: #fef7e0; color: #b06000; padding: 2px 6px; border-radius: 4px; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -124,6 +136,11 @@
         <div class="card" id="speaker-card" style="display: none;">
             <h2>🔊 小爱音箱配置（支持多个）</h2>
             <p style="color: #666; margin-bottom: 12px; font-size: 13px;">勾选需要监听的小爱音箱，任意一个音箱收到指令都可以控制设备，回复也会从听到指令的音箱播报。</p>
+            <p style="color: #1a73e8; margin-bottom: 12px; font-size: 13px; font-weight: 500;">💡 提示：请优先选择类型为"conversation"的实体（如 sensor.xiaomi_lx06_xxx_conversation），这类实体包含完整的语音对话记录。</p>
+            <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                <button class="btn btn-secondary" onclick="discoverSpeakersFromHA()" style="padding: 6px 14px; font-size: 13px;">🔍 刷新音箱列表</button>
+                <span style="font-size: 12px; color: #666; align-self: center;">从HA自动发现所有小爱音箱相关实体</span>
+            </div>
             <div class="speaker-list" id="speaker-list">
                 <div class="loading">正在加载音箱列表...</div>
             </div>
@@ -193,6 +210,18 @@
             </div>
         </div>
 
+        <div class="card" id="commands-card" style="display: none;">
+            <h2>🗣️ 支持的语音指令列表</h2>
+            <p style="color: #666; margin-bottom: 16px; font-size: 13px;">以下是当前配置支持的所有语音指令，按设备类型分组。点击关键词可以复制。</p>
+            
+            <div class="domain-tabs" id="command-domain-tabs" style="margin-bottom: 16px;">
+            </div>
+
+            <div id="commands-list">
+                <div class="loading">正在加载指令列表...</div>
+            </div>
+        </div>
+
         <div class="card" id="test-card" style="display: none;">
             <h2>🧪 指令测试</h2>
             <div class="form-group">
@@ -214,6 +243,8 @@
         let currentDomain = 'climate';
         let bindings = {};
         let selectedSpeakers = [];
+        let speakerEntities = [];
+        let commandsList = {};
 
         function showAlert(message, type = 'success') {
             const area = document.getElementById('alert-area');
@@ -280,7 +311,9 @@
                     if (config.home_assistant.url && config.home_assistant.api_token) {
                         await discoverEntities();
                         await discoverNotifyServices();
+                        await loadCommandsList();
                         document.getElementById('notify-card').style.display = 'block';
+                        document.getElementById('commands-card').style.display = 'block';
                     }
                 }
             } catch (e) {
@@ -309,11 +342,13 @@
                     entities = result.entities;
                     renderDomainTabs();
                     renderEntities();
-                    renderSpeakerList();
+                    await discoverSpeakersFromHA();
                     await discoverNotifyServices();
+                    await loadCommandsList();
                     document.getElementById('entities-card').style.display = 'block';
                     document.getElementById('speaker-card').style.display = 'block';
                     document.getElementById('notify-card').style.display = 'block';
+                    document.getElementById('commands-card').style.display = 'block';
                     document.getElementById('test-card').style.display = 'block';
                 } else {
                     showAlert('❌ 连接失败: ' + (result.error || '未知错误'), 'error');
@@ -352,9 +387,11 @@
                     entities = entitiesData;
                     renderDomainTabs();
                     renderEntities();
-                    renderSpeakerList();
+                    await discoverSpeakersFromHA();
+                    await loadCommandsList();
                     document.getElementById('entities-card').style.display = 'block';
                     document.getElementById('speaker-card').style.display = 'block';
+                    document.getElementById('commands-card').style.display = 'block';
                     document.getElementById('test-card').style.display = 'block';
                     showAlert('✅ 设备列表已加载', 'success');
                 }
@@ -430,25 +467,45 @@
             list.innerHTML = html;
         }
 
+        async function discoverSpeakersFromHA() {
+            try {
+                const resp = await fetch('/api/speakers/discover');
+                const result = await resp.json();
+                if (result.success && result.speakers) {
+                    speakerEntities = result.speakers;
+                    renderSpeakerList();
+                    showAlert('✅ 音箱列表已刷新', 'success');
+                } else {
+                    showAlert('获取音箱列表失败: ' + (result.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('获取音箱列表失败: ' + e.message, 'error');
+            }
+        }
+
         function renderSpeakerList() {
             const list = document.getElementById('speaker-list');
-            const speakers = entities.media_player || [];
+            const speakers = speakerEntities.length > 0 ? speakerEntities : (entities.media_player || []);
             
             if (speakers.length === 0) {
-                list.innerHTML = '<div class="empty-state"><p>没有找到媒体播放器实体，请确认小米MIoT插件已配置</p></div>';
+                list.innerHTML = '<div class="empty-state"><p>没有找到音箱实体，请点击"🔍刷新音箱列表"或确认小米MIoT插件已配置</p></div>';
                 return;
             }
 
             let html = '';
             for (const sp of speakers) {
                 const isSelected = selectedSpeakers.includes(sp.entity_id);
+                const typeLabel = sp.type === 'conversation' ? 'conversation' : 'media_player';
+                const typeClass = sp.type === 'conversation' ? 'conversation-tag' : 'media-player-tag';
+                const isXiaomiBadge = sp.is_xiaomi ? '<span class="xiaomi-badge">小米</span>' : '';
                 html += `
                     <div class="speaker-item ${isSelected ? 'selected' : ''}" onclick="toggleSpeaker('${sp.entity_id}')">
                         <input type="checkbox" class="checkbox" ${isSelected ? 'checked' : ''} onclick="event.stopPropagation();toggleSpeaker('${sp.entity_id}')">
                         <div class="speaker-info">
-                            <div class="speaker-name">${sp.name}</div>
+                            <div class="speaker-name">${sp.name} ${isXiaomiBadge} <span class="${typeClass}">${typeLabel}</span></div>
                             <div class="speaker-id">${sp.entity_id}</div>
                         </div>
+                        <div class="entity-state" style="font-size: 11px;">${sp.state || '-'}</div>
                     </div>
                 `;
             }
@@ -666,6 +723,116 @@
             renderEntities();
             renderBindings();
             showAlert('已删除绑定', 'info');
+        }
+
+        async function loadCommandsList() {
+            try {
+                const resp = await fetch('/api/commands/list');
+                if (resp.ok) {
+                    commandsList = await resp.json();
+                    renderCommandTabs();
+                    renderCommandsList();
+                    document.getElementById('commands-card').style.display = 'block';
+                }
+            } catch (e) {
+                console.log('加载指令列表失败:', e);
+            }
+        }
+
+        function renderCommandTabs() {
+            const tabs = document.getElementById('command-domain-tabs');
+            const categoryLabels = {
+                climate: '❄️ 空调',
+                vacuum: '🤖 扫地机器人',
+                light: '💡 灯',
+                switch: '🔌 开关',
+                fan: '🌀 风扇',
+                refrigerator: '🧊 冰箱',
+                dishwasher: '🍽️ 洗碗机',
+                washing_machine: '👕 洗衣机',
+                dryer: '🔥 烘干机',
+                other: '📦 其他',
+            };
+            
+            let html = '';
+            const categories = commandsList.categories || {};
+            for (const [cat, cmds] of Object.entries(categories)) {
+                if (cmds && cmds.length > 0) {
+                    html += `<div class="domain-tab" onclick="renderCommandsList('${cat}')">${categoryLabels[cat] || cat} (${cmds.length})</div>`;
+                }
+            }
+            
+            if (html === '') {
+                html = '<div style="color: #999;">暂无已配置的语音指令，请先绑定设备</div>';
+            }
+            
+            tabs.innerHTML = html;
+        }
+
+        function renderCommandsList(category = null) {
+            const list = document.getElementById('commands-list');
+            const categories = commandsList.categories || {};
+            
+            let allCommands = [];
+            if (category && categories[category]) {
+                allCommands = categories[category];
+            } else {
+                for (const cmds of Object.values(categories)) {
+                    if (cmds) allCommands.push(...cmds);
+                }
+            }
+            
+            if (allCommands.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>暂无已配置的语音指令，请先绑定设备</p></div>';
+                return;
+            }
+
+            let html = '';
+            for (const cmd of allCommands) {
+                const typeLabel = cmd.device_type_label || cmd.device_type;
+                const keywordsHtml = cmd.keywords.map(kw => `
+                    <span class="command-keyword" onclick="copyToClipboard('${kw}')" title="点击复制">${kw}</span>
+                `).join('');
+                
+                let roomsHtml = '';
+                if (cmd.rooms && Object.keys(cmd.rooms).length > 0) {
+                    roomsHtml = `
+                        <div class="command-rooms">
+                            <div style="font-size: 11px; color: #888; margin-bottom: 4px;">🏠 支持的房间区域:</div>
+                            ${Object.entries(cmd.rooms).map(([name, room]) => `
+                                <div class="command-room-item">
+                                    <strong>${name}</strong> (ID: ${room.segment_id}) - ${room.clean_mode === 'sweep' ? '仅清扫' : room.clean_mode === 'mop' ? '仅拖地' : '扫拖'}${room.repeats > 1 ? `×${room.repeats}` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+                
+                html += `
+                    <div class="command-card">
+                        <div class="command-header">
+                            <span class="command-name">
+                                <span class="command-type type-${cmd.device_type}">${typeLabel}</span>
+                                ${cmd.name}
+                            </span>
+                            <span style="font-size: 12px; color: #666; font-family: monospace;">${cmd.entity_id}</span>
+                        </div>
+                        <div class="command-keywords">
+                            ${keywordsHtml}
+                        </div>
+                        ${roomsHtml}
+                    </div>
+                `;
+            }
+            list.innerHTML = html;
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                showAlert(`✅ 已复制: ${text}`, 'success');
+            }).catch(() => {
+                showAlert('复制失败', 'error');
+            });
         }
 
         async function saveConfig() {

@@ -200,15 +200,21 @@ async def test_command(text: str = Body(..., embed=True)):
 
 
 @router.post("/api/command/execute")
-async def execute_test_command(text: str = Body(..., embed=True)):
+async def execute_test_command(data: Dict[str, Any] = Body(...)):
     try:
+        text = data.get("text", "")
+        source_speaker = data.get("source_speaker", "")
+        
+        if not text:
+            return {"success": False, "error": "text 参数不能为空"}
+
         config = config_manager.load()
         from ..ha_client.client import HomeAssistantClient
         from ..engine.interceptor import CommandInterceptor
 
         ha_client = HomeAssistantClient(config.home_assistant)
         interceptor = CommandInterceptor(config, ha_client)
-        handled = await interceptor.intercept(text, None)
+        handled = await interceptor.intercept(text, source_speaker)
         await ha_client.close()
 
         return {
@@ -238,6 +244,88 @@ async def get_vacuum_rooms(entity_id: str):
         import traceback
         traceback.print_exc()
         return {"success": False, "error": str(e), "rooms": []}
+
+
+@router.get("/api/commands/list")
+async def get_commands_list():
+    try:
+        config = config_manager.load()
+        commands = config.commands
+        
+        result = {
+            "categories": {
+                "climate": [],
+                "vacuum": [],
+                "light": [],
+                "switch": [],
+                "fan": [],
+                "refrigerator": [],
+                "dishwasher": [],
+                "washing_machine": [],
+                "dryer": [],
+                "other": [],
+            },
+            "all_commands": []
+        }
+        
+        type_labels = {
+            "climate": "空调",
+            "vacuum": "扫地机器人",
+            "light": "灯",
+            "switch": "开关",
+            "fan": "风扇",
+            "refrigerator": "冰箱",
+            "dishwasher": "洗碗机",
+            "washing_machine": "洗衣机",
+            "dryer": "烘干机",
+        }
+        
+        for cmd_id, cmd in commands.items():
+            device_type = getattr(cmd, 'device_type', 'climate')
+            category = device_type if device_type in result["categories"] else "other"
+            
+            rooms = {}
+            if hasattr(cmd, 'rooms') and cmd.rooms:
+                for room_key, room_config in cmd.rooms.items():
+                    room_name = room_config.name if hasattr(room_config, 'name') else room_config.get('name', room_key)
+                    rooms[room_name] = {
+                        "segment_id": room_config.segment_id if hasattr(room_config, 'segment_id') else room_config.get('segment_id'),
+                        "clean_mode": room_config.clean_mode if hasattr(room_config, 'clean_mode') else room_config.get('clean_mode', 'sweep_and_mop'),
+                        "repeats": room_config.repeats if hasattr(room_config, 'repeats') else room_config.get('repeats', 1),
+                    }
+            
+            cmd_info = {
+                "command_id": cmd_id,
+                "name": cmd.name,
+                "entity_id": cmd.entity_id,
+                "device_type": device_type,
+                "device_type_label": type_labels.get(device_type, device_type),
+                "keywords": list(cmd.keywords) if hasattr(cmd, 'keywords') else [],
+                "rooms": rooms,
+            }
+            
+            result["categories"][category].append(cmd_info)
+            result["all_commands"].append(cmd_info)
+        
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/api/speakers/discover")
+async def discover_speakers():
+    try:
+        config = config_manager.load()
+        ha_client = HomeAssistantClient(config.home_assistant)
+        speakers = await ha_client.discover_speakers()
+        await ha_client.close()
+        return {"success": True, "speakers": speakers}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "speakers": []}
 
 
 @router.get("/api/notify/services")
@@ -325,3 +413,76 @@ async def restart_service():
 
     threading.Thread(target=delayed_exit, daemon=True).start()
     return {"message": "服务正在重启..."}
+
+
+@router.get("/api/export/entities")
+async def export_entities():
+    try:
+        config = config_manager.load()
+    except FileNotFoundError:
+        raise HTTPException(status_code=400, detail="请先配置 Home Assistant 连接信息")
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"加载配置失败: {str(e)}")
+
+    ha_url = config.home_assistant.url.strip().strip('`')
+    if not ha_url or not ha_url.startswith('http'):
+        raise HTTPException(status_code=400, detail="Home Assistant URL 格式不正确，请检查配置")
+
+    try:
+        ha_client = HomeAssistantClient(config.home_assistant)
+        result = await ha_client.discover_entities()
+        await ha_client.close()
+        
+        entities = result.get("entities", {})
+        areas = result.get("areas", {})
+        
+        export_data = {
+            "areas": areas,
+            "categories": {
+                "climate": entities.get("climate", []),
+                "light": entities.get("light", []),
+                "washing_machine": entities.get("washing_machine", []),
+                "dryer": entities.get("dryer", []),
+                "stove": entities.get("stove", []),
+                "range_hood": entities.get("range_hood", []),
+                "bathroom_heater": entities.get("bathroom_heater", []),
+                "smart_socket": entities.get("smart_socket", []),
+                "notify": entities.get("notify", []),
+                "vacuum": entities.get("vacuum", []),
+                "fan": entities.get("fan", []),
+                "cover": entities.get("cover", []),
+                "humidifier": entities.get("humidifier", []),
+                "media_player": entities.get("media_player", []),
+                "sensor": entities.get("sensor", []),
+                "switch": entities.get("switch", []),
+                "other": entities.get("other", []),
+            },
+            "summary": {
+                "climate": len(entities.get("climate", [])),
+                "light": len(entities.get("light", [])),
+                "washing_machine": len(entities.get("washing_machine", [])),
+                "dryer": len(entities.get("dryer", [])),
+                "stove": len(entities.get("stove", [])),
+                "range_hood": len(entities.get("range_hood", [])),
+                "bathroom_heater": len(entities.get("bathroom_heater", [])),
+                "smart_socket": len(entities.get("smart_socket", [])),
+                "notify": len(entities.get("notify", [])),
+                "vacuum": len(entities.get("vacuum", [])),
+                "fan": len(entities.get("fan", [])),
+                "cover": len(entities.get("cover", [])),
+                "humidifier": len(entities.get("humidifier", [])),
+                "media_player": len(entities.get("media_player", [])),
+                "sensor": len(entities.get("sensor", [])),
+                "switch": len(entities.get("switch", [])),
+                "other": len(entities.get("other", [])),
+                "total": sum(len(v) for v in entities.values()),
+            }
+        }
+        
+        return export_data
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"导出实体失败: {str(e)}")

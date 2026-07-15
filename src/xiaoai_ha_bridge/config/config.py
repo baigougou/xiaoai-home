@@ -15,7 +15,8 @@ class HomeAssistantConfig(BaseModel):
 
 
 class XiaomiSpeakerConfig(BaseModel):
-    entity_id: str = Field(..., description="小爱音箱实体ID")
+    entity_id: str = Field(..., description="小爱音箱实体ID（用于轮询语音指令）")
+    play_entity_id: Optional[str] = Field(default=None, description="播放实体ID（用于TTS播放，如media_player）")
     execute_text_service: str = Field(default="xiaomi_miot_raw.execute_text", description="执行文本指令服务")
     play_text_service: str = Field(default="xiaomi_miot_raw.play_text", description="播放文本服务")
 

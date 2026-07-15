@@ -44,7 +44,7 @@ class CommandInterceptor:
             self.processing = False
 
     def _get_tts_speaker(self, source_entity_id: str = None) -> Tuple[str, str, str]:
-        """获取TTS音箱信息，返回 (entity_id, execute_text_service, play_text_service)"""
+        """获取TTS音箱信息，返回 (play_entity_id, execute_text_service, play_text_service)"""
         speaker = None
         if source_entity_id:
             for sp in self.config.xiaomi_speakers:
@@ -55,8 +55,9 @@ class CommandInterceptor:
             speaker = self.config.xiaomi_speakers[0]
         
         if speaker:
+            play_entity = speaker.play_entity_id if speaker.play_entity_id else speaker.entity_id
             return (
-                speaker.entity_id,
+                play_entity,
                 getattr(speaker, 'execute_text_service', 'xiaomi_miot_raw.execute_text'),
                 getattr(speaker, 'play_text_service', 'xiaomi_miot_raw.play_text')
             )
@@ -476,14 +477,15 @@ class CommandInterceptor:
                 speaker_ids = self.config.get_speaker_entity_ids()
                 if self.config.tts.enabled and speaker_ids:
                     for speaker_entity_id in speaker_ids:
-                        # 查找对应音箱的 play_text_service
+                        play_entity_id = speaker_entity_id
                         play_svc = None
                         for sp in self.config.xiaomi_speakers:
                             if sp.entity_id == speaker_entity_id:
+                                play_entity_id = sp.play_entity_id if sp.play_entity_id else speaker_entity_id
                                 play_svc = getattr(sp, 'play_text_service', None)
                                 break
                         try:
-                            await self.ha_client.play_text(speaker_entity_id, message, service=play_svc)
+                            await self.ha_client.play_text(play_entity_id, message, service=play_svc)
                         except Exception:
                             pass
                 

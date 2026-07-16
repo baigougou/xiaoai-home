@@ -535,9 +535,6 @@
                 suggestions.push('扫拖客厅');
                 suggestions.push('仅拖厨房');
                 suggestions.push('打扫主卧');
-                suggestions.push('扫一次拖一次');
-                suggestions.push('仅扫地');
-                suggestions.push('仅拖地');
                 suggestions.push('自清洁');
                 suggestions.push('回去充电');
                 suggestions.push('状态');
@@ -1218,4 +1215,199 @@
                     updateDashboard();
                     showAlert('✅ 配置保存成功！', 'success');
                 } else {
-                    const err = await resp
+                    const err = await resp.json();
+                    showAlert('❌ 保存失败: ' + (err.detail || JSON.stringify(err)), 'error');
+                }
+            } catch (e) {
+                showAlert('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        async function restartService() {
+            if (!confirm('确定要重启服务吗？重启后页面会暂时无法访问。')) {
+                return;
+            }
+            try {
+                await fetch('/api/restart', { method: 'POST' });
+                showAlert('🔄 服务正在重启，请稍候刷新页面...', 'info');
+            } catch (e) {
+                showAlert('重启指令已发送', 'info');
+            }
+        }
+
+        function fillTestCommand(text) {
+            document.getElementById('test-text').value = text;
+        }
+
+        async function testCommand() {
+            const text = document.getElementById('test-text').value;
+            if (!text) {
+                showAlert('请输入指令', 'error');
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/command/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const result = await resp.json();
+                const resultDiv = document.getElementById('test-result');
+
+                if (result.matched && result.parsed) {
+                    const p = result.parsed;
+                    const actionMap = {
+                        turn_on: '🔛 打开设备',
+                        turn_off: '🔴 关闭设备',
+                        adjust: '⚙️ 调节设置',
+                        start: '▶️ 开始全屋清扫',
+                        stop: '⏹️ 停止',
+                        pause: '⏸️ 暂停',
+                        return_to_base: '🏠 返回充电',
+                        clean_segment: '🧹 指定区域清扫',
+                        query: '❓ 查询状态'
+                    };
+                    const cleanModeMap = {
+                        sweep: '仅清扫',
+                        sweep_and_mop: '扫拖一体',
+                        mop: '仅拖地'
+                    };
+                    const action = actionMap[p.action] || p.action || '其他操作';
+                    let details = `✅ 匹配到设备: <b>${p.name}</b> (${getTypeLabel(p.device_type)})<br>操作: ${action}`;
+                    if (p.temperature) details += `<br>温度: ${p.temperature}°C`;
+                    if (p.mode) {
+                        const modeText = { cool: '制冷', heat: '制热', dry: '除湿', auto: '自动', fan_only: '送风' }[p.mode] || p.mode;
+                        details += `<br>模式: ${modeText}`;
+                    }
+                    if (p.room) details += `<br>房间: ${p.room}`;
+                    if (p.clean_mode) details += `<br>清扫模式: ${cleanModeMap[p.clean_mode] || p.clean_mode}`;
+                    if (p.repeats && p.repeats > 1) details += `<br>清扫次数: ${p.repeats}次`;
+                    resultDiv.innerHTML = `<div class="alert success">${details}</div>`;
+                } else {
+                    resultDiv.innerHTML = '<div class="alert error">❌ 未匹配到任何设备或指令。请确认设备已绑定且关键词包含在指令中。</div>';
+                }
+            } catch (e) {
+                showAlert('测试失败: ' + e.message, 'error');
+            }
+        }
+
+        async function executeCommand() {
+            const text = document.getElementById('test-text').value;
+            if (!text) {
+                showAlert('请输入指令', 'error');
+                return;
+            }
+
+            const resultDiv = document.getElementById('test-result');
+            resultDiv.innerHTML = '<div class="alert info">🚀 正在执行指令，请稍候...</div>';
+
+            try {
+                const resp = await fetch('/api/command/execute', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text })
+                });
+                const result = await resp.json();
+
+                if (result.success) {
+                    resultDiv.innerHTML = `<div class="alert success">✅ 执行成功！${result.message}</div>`;
+                    showAlert('✅ 指令执行完成，检查小爱音箱和手机通知', 'success');
+                } else {
+                    resultDiv.innerHTML = `<div class="alert error">❌ 执行失败: ${result.error || result.message || '未知错误'}</div>`;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `<div class="alert error">❌ 请求失败: ${e.message}</div>`;
+            }
+        }
+
+        async function discoverNotifyServices() {
+            try {
+                const resp = await fetch('/api/notify/services');
+                const result = await resp.json();
+                const listEl = document.getElementById('notify-services-list');
+                const savedServices = window._savedNotifyServices || getSelectedNotifyServices();
+
+                if (result.success && result.services && result.services.length > 0) {
+                    listEl.innerHTML = '';
+                    for (const svc of result.services) {
+                        const item = document.createElement('div');
+                        item.className = 'notify-item';
+                        const checkbox = document.createElement('input');
+                        checkbox.type = 'checkbox';
+                        checkbox.className = 'notify-checkbox';
+                        checkbox.value = svc.id;
+                        checkbox.dataset.name = svc.name;
+                        if (savedServices.includes(svc.id)) {
+                            checkbox.checked = true;
+                        }
+                        const span = document.createElement('span');
+                        span.className = 'notify-name';
+                        span.textContent = svc.name;
+                        item.appendChild(checkbox);
+                        item.appendChild(span);
+                        listEl.appendChild(item);
+                    }
+                    window._savedNotifyServices = null;
+                } else {
+                    listEl.innerHTML = '<div style="color: var(--text-muted); text-align: center; padding: 20px;">未发现通知服务，请确保已安装HA手机APP并登录</div>';
+                    showAlert('未发现通知服务，请确保已安装HA手机APP', 'info');
+                }
+            } catch (e) {
+                console.log('获取通知服务失败:', e);
+                showAlert('获取通知服务失败: ' + e.message, 'error');
+            }
+        }
+
+        function getSelectedNotifyServices() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            return Array.from(checkboxes).filter(cb => cb.checked).map(cb => cb.value);
+        }
+
+        function selectAllNotify() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = true);
+        }
+
+        function deselectAllNotify() {
+            const checkboxes = document.querySelectorAll('#notify-services-list input[type="checkbox"]');
+            checkboxes.forEach(cb => cb.checked = false);
+        }
+
+        async function testNotification() {
+            const notifyServices = getSelectedNotifyServices();
+
+            if (notifyServices.length === 0) {
+                showAlert('请先勾选至少一个通知设备', 'error');
+                return;
+            }
+
+            const customMessage = document.getElementById('notify-test-message').value.trim();
+            const title = '🧪 测试通知';
+            const message = customMessage || '已经打开小孩空调，模式制冷温度26度';
+
+            try {
+                const resp = await fetch('/api/notify/test', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        notify_services: notifyServices,
+                        title: title,
+                        message: message
+                    })
+                });
+                const result = await resp.json();
+                if (result.success) {
+                    showAlert(`✅ 测试通知已发送到${notifyServices.length}个设备，请检查手机！`, 'success');
+                } else {
+                    showAlert('❌ 发送失败: ' + (result.error || '未知错误'), 'error');
+                }
+            } catch (e) {
+                showAlert('❌ 请求失败: ' + e.message, 'error');
+            }
+        }
+
+        loadConfig();
+    </script>
+</body>
+</html>

@@ -8,7 +8,10 @@ logger = logging.getLogger(__name__)
 
 class HomeAssistantClient:
     def __init__(self, config: HomeAssistantConfig):
-        self.url = config.url.rstrip("/")
+        url = config.url.rstrip("/")
+        if not url.startswith("http://") and not url.startswith("https://"):
+            url = "http://" + url
+        self.url = url
         self.api_token = config.api_token
         self.headers = {
             "Authorization": f"Bearer {self.api_token}",
